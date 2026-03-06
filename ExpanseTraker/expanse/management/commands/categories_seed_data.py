@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
+
 from expanse.models import category
+
 
 class Command(BaseCommand):
     help = "Seed initial categories"
@@ -20,7 +22,7 @@ class Command(BaseCommand):
 
         created = 0
         for name in categories:
-            _, was_created = category.objects.get_or_create(name=name,is_default=True)
+            _, was_created = category.objects.get_or_create(name=name, is_default=True)
             if was_created:
                 created += 1
 

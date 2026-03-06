@@ -1,45 +1,62 @@
 from django.shortcuts import render
-from rest_framework.views import APIView
-from .models import User,VerificationToken
-from .serializers import UserSerializer
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView,TokenBlacklistView
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenBlacklistView, TokenObtainPairView
+
+from .models import User, VerificationToken
+from .serializers import UserSerializer
+
 # Create your views here.
 
+
 class RegisterUser(APIView):
-    def post(self,request):
+    def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "User registered successfully"},
+                status=status.HTTP_201_CREATED,
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserDetails(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         user = request.user
         queryset = User.active_objects.filter(id=user.id)
         if not queryset.exists():
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = UserSerializer(queryset.first())
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
-    def post(self,request, *args, **kwargs):
-        user = User.active_objects.filter(email=request.data.get('email')).first()
+    def post(self, request, *args, **kwargs):
+        user = User.active_objects.filter(email=request.data.get("email")).first()
         if not user:
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Invalid email or password"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         if not user.is_active:
-            return Response({'error': 'User Not Found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "User Not Found"}, status=status.HTTP_404_NOT_FOUND
+            )
         if not user.is_verified:
-            return Response({'error': 'User Not Verified Please Verify Your Account'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "User Not Verified Please Verify Your Account"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         return super().post(request, *args, **kwargs)
 
 
-    
 class VerifyUser(APIView):
     def get(self, request, token):
         try:
@@ -48,6 +65,11 @@ class VerifyUser(APIView):
             user.is_verified = True
             user.save()
             verification_token.delete()
-            return Response({'message': 'Account verified successfully'}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Account verified successfully"}, status=status.HTTP_200_OK
+            )
         except VerificationToken.DoesNotExist:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
