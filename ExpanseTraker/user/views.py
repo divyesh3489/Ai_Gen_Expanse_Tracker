@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenBlacklistView, TokenObtainPairVi
 
 from .models import User, VerificationToken
 from .serializers import UserSerializer
+from .tasks import send_verification_email
 
 # Create your views here.
 
@@ -16,6 +17,8 @@ class RegisterUser(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            send_verification_email.delay(serializer.instance.id)
+
             return Response(
                 {"message": "User registered successfully"},
                 status=status.HTTP_201_CREATED,

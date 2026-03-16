@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
+from dateutil.relativedelta import relativedelta
+from django.db.models import Q
 
 # Create your models here.
 
@@ -105,20 +107,23 @@ class Budget(baseModel):
 class RrcurringManager(models.Manager):
     def due_recurrings(self):
         today = timezone.now().date()
-        return self.filter(is_active=True, next_run_date__lte=today)
-
+        return self.active_recurrings().filter(Q(next_run_date__lte=today) | Q(next_run_date__isnull=True))
+    
     def active_recurrings(self):
         return self.filter(is_active=True)
 
     def update_next_run_date(self, recurring):
+        if recurring.next_run_date is None:
+            recurring.next_run_date = recurring.start_date
         if recurring.frequency == "daily":
             recurring.next_run_date += timezone.timedelta(days=1)
         elif recurring.frequency == "weekly":
             recurring.next_run_date += timezone.timedelta(weeks=1)
         elif recurring.frequency == "monthly":
-            recurring.next_run_date += timezone.timedelta(days=30)  # Approximation
+            # Then replace the placeholder with:
+            recurring.next_run_date += relativedelta(months=1)
         elif recurring.frequency == "yearly":
-            recurring.next_run_date += timezone.timedelta(days=365)  # Approximation
+            recurring.next_run_date += relativedelta(years=1) 
         recurring.save()
 
     def stop_recurrings(self, recurring):
@@ -159,3 +164,6 @@ class Recurring(baseModel):
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     is_active = models.BooleanField(default=True)
+    recurringObjects = RrcurringManager()
+    
+    
