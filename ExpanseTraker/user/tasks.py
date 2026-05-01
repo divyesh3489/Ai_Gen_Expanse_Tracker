@@ -13,9 +13,14 @@ def send_verification_email(user_id):
     try:
         user = User.objects.get(id=user_id)
         if not user.is_verified:
-            token = VerificationToken.objects.create(
-                user=user, token=get_random_string(length=50)
-            )
+            token = VerificationToken.objects.filter(user=user)
+            if token.exists():
+                token = token.first()
+            else:
+                token = VerificationToken.objects.create(
+                    user=user, token=get_random_string(32)
+                )
+            print(token)
             verification_link = f"{settings.DOMAIN}/user/verify/{token.token}/"
 
             send_mail(

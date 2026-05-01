@@ -38,7 +38,7 @@ class UserDetails(APIView):
             )
         serializer = UserSerializer(queryset.first())
         return Response(serializer.data, status=status.HTTP_200_OK)
-
+        
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
@@ -76,3 +76,23 @@ class VerifyUser(APIView):
                 {"error": "Invalid or expired token"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+class ResendVerificationEmail(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        user = User.active_objects.filter(email=email).first()
+        if not user:
+            return Response(
+                {"error": "User with this email does not exist"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if user.is_verified:
+            return Response(
+                {"message": "User is already verified"}, status=status.HTTP_200_OK
+            )
+        send_verification_email.delay(user.id)
+        return Response(
+            {"message": "Verification email resent successfully"},
+            status=status.HTTP_200_OK,
+        )
+     
