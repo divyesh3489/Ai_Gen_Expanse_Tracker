@@ -1,0 +1,56 @@
+
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ExpanseTraker:/app
+    command: sh -c "python manage.py wait_for_db && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      - mydb
+      - redis
+      - celery
+      - celery-beat
+  mydb:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=expanse_tracker_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+  celery:
+    build: .
+    env_file:
+      - .env
+    command: celery -A ExpanseTraker worker --loglevel=info
+    volumes:
+      - ./ExpanseTraker:/app
+    depends_on:
+      - mydb
+      - redis
+  celery-beat:
+    build: .
+    env_file:
+      - .env
+    command: celery -A ExpanseTraker beat --loglevel=info
+    volumes:
+      - ./ExpanseTraker:/app
+    depends_on:
+      - mydb
+      - redis
+
+volumes:
+  postgres_data: {}

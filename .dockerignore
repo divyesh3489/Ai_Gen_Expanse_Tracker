@@ -1,0 +1,16 @@
+#git
+.git
+.gitignore
+
+#docker
+.docker
+
+#python
+ExpanseTraker/__pycache__
+ExpanseTraker/*/__pycache__
+ExpanseTraker/*/*/__pycache__
+ExpanseTraker/*/*/*/__pycache__
+ExpanseTraker/*/*/*/*/__pycache__
+
+.venv/
+venv/
