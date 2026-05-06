@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App-level base styling (keep minimal; prefer Tailwind classes). */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  @apply bg-slate-50 text-slate-900;
+}
+
+/* Better defaults for form controls in Tailwind. */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}

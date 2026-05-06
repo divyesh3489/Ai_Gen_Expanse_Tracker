@@ -18,12 +18,28 @@ class CategorySerializer(serializers.ModelSerializer):
         validated_data.pop("is_default", None)
         return category.objects.create(user=user, **validated_data)
 
+    def validate_name(self, value):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        normalized = (value or "").strip().capitalize()
+        if not normalized:
+            raise ValidationError("Name is required.")
+
+        if user and category.objects.filter(user=user, name=normalized).exists():
+            raise ValidationError("Category already exists.")
+
+        if category.objects.filter(is_default=True, name=normalized).exists():
+            raise ValidationError("Default category already exists.")
+
+        return normalized
+
     def update(self, instance, validated_data):
         user = self.context["request"].user
         if instance.is_default:
             raise ValidationError("Cannot update a default category.")
         # Remove is_default from validated_data if present since it's read-only
-        instance.name = validated_data.get("name", instance.name)
+        instance.name = validated_data.get("name", instance.name).capitalize()
         instance.updated_by = user
         instance.save()
         return instance
@@ -82,14 +98,42 @@ class IncomeSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
+class BudgetSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = Budget
+        fields = ["id", "category", "category_name", "amount", "start_date", "end_date"]
+        extra_kwargs = {
+            "category": {"required": False, "allow_null": True, "write_only": True}
+        }
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        validated_data["created_by"] = user
+        validated_data["updated_by"] = user
+        return Budget.objects.create(user=user, **validated_data)
+
+    def update(self, instance, validated_data):
+        user = self.context["request"].user
+        instance.category = validated_data.get("category", instance.category)
+        instance.amount = validated_data.get("amount", instance.amount)
+        instance.start_date = validated_data.get("start_date", instance.start_date)
+        instance.end_date = validated_data.get("end_date", instance.end_date)
+        instance.updated_by = user
+        instance.save()
+        return instance
+
 class RecurringSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.email", read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Recurring
         fields = ['id','user','user_name','category','category_name','amount','note','start_date','end_date','next_run_date','frequency','type']
-        
+            
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["created_by"] = user
@@ -109,4 +153,13 @@ class RecurringSerializer(serializers.ModelSerializer):
         instance.updated_by = user
         instance.save()
         return instance
+    
+
+    def validate(self, data):
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+        if end_date and start_date and start_date > end_date:
+            raise ValidationError("End date must be after start date.")
+        return data
+    
     

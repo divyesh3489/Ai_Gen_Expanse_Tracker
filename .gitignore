@@ -39,6 +39,7 @@ db.sqlite3
 *~
 .DS_Store
 
+
 # React
 node_modules/
 npm-debug.log
@@ -53,3 +54,8 @@ build/
 # OS
 Thumbs.db
 .DS_Store
+
+# Cursor
+.cursor/
+.cursor/commands/
+
