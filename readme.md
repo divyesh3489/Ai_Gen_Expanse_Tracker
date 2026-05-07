@@ -120,3 +120,4 @@ The Recurring model is used to store recurring expenses and incomes.
 - `POST /api/v1/users/logout/` - Logout a user
 - `GET /api/v1/users/me/` - Get user profile
 - `GET /api/v1/users/verify/<str:token>/` - Verify user email
+- `POST /api/v1/users/resend-verification/` - Resend verification email

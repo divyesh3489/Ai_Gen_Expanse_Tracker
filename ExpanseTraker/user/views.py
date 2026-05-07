@@ -91,8 +91,5 @@ class ResendVerificationEmail(APIView):
                 {"message": "User is already verified"}, status=status.HTTP_200_OK
             )
         send_verification_email.delay(user.id)
-        return Response(
-            {"message": "Verification email resent successfully"},
-            status=status.HTTP_200_OK,
-        )
+        return Response(status=status.HTTP_302_FOUND, headers={"Location": "/login/"})
      
