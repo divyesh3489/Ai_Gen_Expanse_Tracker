@@ -7,23 +7,6 @@
 - Redis
 - PostgreSQL
 
-### AWS Architecture (Containers + Reverse Proxy)
-
-```text
-Internet
-   │
-   ▼
-Nginx (Reverse Proxy)
-   │
-   ├── Frontend Container (React)
-   └── Django Backend Container
-           │
-           ├── PostgreSQL Container
-           ├── Redis Container
-           ├── Celery Worker
-           └── Celery Beat
-```
-
 
 ## Features ##
 - User Registration
@@ -214,3 +197,18 @@ Request body:
 ```json
 { "category": 1, "amount": "5000.00", "start_date": "2026-05-01", "end_date": "2026-05-31" }
 ```
+
+
+### AWS Architectural diagram ###
+Internet
+   │
+   ▼
+Nginx (Reverse Proxy)
+   │
+   ├── Frontend Container (React)
+   └── Django Backend Container
+           │
+           ├── PostgreSQL Container
+           ├── Redis Container
+           ├── Celery Worker
+           └── Celery Beat
