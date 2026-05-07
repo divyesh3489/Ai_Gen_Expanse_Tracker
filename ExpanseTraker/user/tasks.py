@@ -13,10 +13,15 @@ def send_verification_email(user_id):
     try:
         user = User.objects.get(id=user_id)
         if not user.is_verified:
-            token = VerificationToken.objects.create(
-                user=user, token=get_random_string(length=50)
+            token_qs = VerificationToken.objects.filter(user=user).order_by(
+                "-created_at"
             )
-            verification_link = f"{settings.DOMAIN}/user/verify/{token.token}/"
+            token = token_qs.first()
+            if not token:
+                token = VerificationToken.objects.create(
+                    user=user, token=get_random_string(32)
+                )
+            verification_link = f"{settings.DOMAIN}/api/v1/user/verify/{token.token}/"
 
             send_mail(
                 "Verify Your Account",
@@ -25,5 +30,6 @@ def send_verification_email(user_id):
                 [user.email],
                 fail_silently=False,
             )
+            
     except User.DoesNotExist:
         print(f"User with id {user_id} does not exist.")

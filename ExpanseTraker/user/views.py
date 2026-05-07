@@ -1,13 +1,14 @@
 from django.shortcuts import render
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import  TokenObtainPairView
-
 from .models import User, VerificationToken
 from .serializers import UserSerializer
 from .tasks import send_verification_email
+from rest_framework.throttling import ScopedRateThrottle
 
 # Create your views here.
 
@@ -38,7 +39,7 @@ class UserDetails(APIView):
             )
         serializer = UserSerializer(queryset.first())
         return Response(serializer.data, status=status.HTTP_200_OK)
-
+        
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
@@ -69,10 +70,33 @@ class VerifyUser(APIView):
             user.save()
             verification_token.delete()
             return Response(
-                {"message": "Account verified successfully"}, status=status.HTTP_200_OK
+                status=status.HTTP_308_PERMANENT_REDIRECT,
+                headers={"Location": settings.FRONTEND_LOGIN_URL},
             )
         except VerificationToken.DoesNotExist:
             return Response(
                 {"error": "Invalid or expired token"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+class ResendVerificationEmail(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'email_verification'
+    def post(self, request):
+        email = request.data.get("email")
+        user = User.active_objects.filter(email=email).first()
+        if not user:
+            return Response(
+                {"error": "User with this email does not exist"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if user.is_verified:
+            return Response(
+                {"message": "User is already verified"}, status=status.HTTP_200_OK
+            )
+        send_verification_email.delay(user.id)
+        return Response(
+            {"message": "Verification email resent successfully"},
+            status=status.HTTP_200_OK,
+        )
+     
