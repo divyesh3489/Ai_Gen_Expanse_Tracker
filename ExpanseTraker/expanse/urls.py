@@ -15,4 +15,10 @@ urlpatterns = [
     ),
     path("incomes/", views.IncomeView.as_view(), name="incomes"),
     path("incomes/<int:pk>/", views.IncomeDetailView.as_view(), name="income_detail"),
+    path("recurring/", views.RecurringView.as_view(), name="recurring"),    
+    path("recurring/<int:pk>/", views.RecurringDetailView.as_view(), name="recurring_detail"),
+    path("budgets/", views.BudgetView.as_view(), name="budgets"),
+    path("budgets/summary/", views.BudgetSummaryView.as_view(), name="budget_summary"),
+    path("budgets/<int:pk>/", views.BudgetDetailView.as_view(), name="budget_detail"),
 ]
+    

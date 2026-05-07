@@ -115,9 +115,85 @@ The Recurring model is used to store recurring expenses and incomes.
 
 
 ## Endpoints ##
-- `POST /api/v1/users/register/` - Register a new user
-- `POST /api/v1/users/login/` - Login a user
-- `POST /api/v1/users/logout/` - Logout a user
-- `GET /api/v1/users/me/` - Get user profile
-- `GET /api/v1/users/verify/<str:token>/` - Verify user email
-- `POST /api/v1/users/resend-verification/` - Resend verification email
+- **Auth base**: `/api/v1/user/`
+- **Resource base**: `/api/v1/expanse/`
+
+### User/Auth (`/api/v1/user/`)
+- `POST /api/v1/user/register/` - Register a new user (triggers verification email)
+- `POST /api/v1/user/login/` - Login a user (returns JWT access/refresh; requires verified user)
+- `POST /api/v1/user/token/refresh/` - Refresh access token
+- `POST /api/v1/user/logout/` - Logout (blacklist refresh token)
+- `GET  /api/v1/user/me/` - Get user profile (auth required)
+- `GET  /api/v1/user/verify/<str:token>/` - Verify user email
+- `POST /api/v1/user/resend-verification/` - Resend verification email
+
+### Categories (`/api/v1/expanse/`)
+- `GET /api/v1/expanse/categories/` - Get all categories
+- `POST /api/v1/expanse/categories/` - Create a new category
+- `GET /api/v1/expanse/categories/<int:pk>/` - Get a category by ID
+- `PATCH /api/v1/expanse/categories/<int:pk>/` - Update a category (cannot update default categories)
+- `DELETE /api/v1/expanse/categories/<int:pk>/` - Delete a category
+
+### Expenses (`/api/v1/expanse/`)
+- `GET /api/v1/expanse/expanses/` - Get all expanses
+- `POST /api/v1/expanse/expanses/` - Create a new expanse
+- `GET /api/v1/expanse/expanses/<int:pk>/` - Get an expanse by ID
+- `PUT /api/v1/expanse/expanses/<int:pk>/` - Update an expanse
+- `DELETE /api/v1/expanse/expanses/<int:pk>/` - Delete an expanse
+
+### Incomes (`/api/v1/expanse/`)
+- `GET /api/v1/expanse/incomes/` - Get all incomes
+- `POST /api/v1/expanse/incomes/` - Create a new income
+- `GET /api/v1/expanse/incomes/<int:pk>/` - Get an income by ID
+- `PUT /api/v1/expanse/incomes/<int:pk>/` - Update an income
+- `DELETE /api/v1/expanse/incomes/<int:pk>/` - Delete an income
+
+### Recurring (`/api/v1/expanse/`)
+- `GET /api/v1/expanse/recurring/` - Get all recurring entries
+- `POST /api/v1/expanse/recurring/` - Create a recurring entry
+- `GET /api/v1/expanse/recurring/<int:pk>/` - Get a recurring entry by ID
+- `PUT /api/v1/expanse/recurring/<int:pk>/` - Update a recurring entry
+- `DELETE /api/v1/expanse/recurring/<int:pk>/` - Delete a recurring entry
+
+### Budgets (`/api/v1/expanse/`)
+- `GET /api/v1/expanse/budgets/` - Get all budgets
+- `POST /api/v1/expanse/budgets/` - Create a budget
+- `GET /api/v1/expanse/budgets/<int:pk>/` - Get a budget by ID
+- `PUT /api/v1/expanse/budgets/<int:pk>/` - Replace a budget
+- `PATCH /api/v1/expanse/budgets/<int:pk>/` - Update a budget
+- `DELETE /api/v1/expanse/budgets/<int:pk>/` - Delete a budget
+- `GET /api/v1/expanse/budgets/summary/?from=YYYY-MM-DD&to=YYYY-MM-DD` - Budget vs spent summary
+
+## Frontend integration notes (JWT)
+- Send `Authorization: Bearer <access_token>` for all `/api/v1/expanse/*` endpoints and `/api/v1/user/me/`.
+- `login/` returns `access` + `refresh`. Use `token/refresh/` to get a new access token.
+- `logout/` blacklists the refresh token (requires SimpleJWT blacklist app enabled).
+
+## Example payloads (minimal)
+
+### Create expense
+Request body:
+```json
+{ "category": 1, "amount": "120.50", "note": "Groceries", "date": "2026-05-06" }
+```
+
+### Create recurring expense
+Request body:
+```json
+{
+  "category": 1,
+  "amount": "499.00",
+  "note": "Subscription",
+  "start_date": "2026-05-01",
+  "end_date": null,
+  "next_run_date": null,
+  "frequency": "monthly",
+  "type": "expense"
+}
+```
+
+### Create budget (category budget)
+Request body:
+```json
+{ "category": 1, "amount": "5000.00", "start_date": "2026-05-01", "end_date": "2026-05-31" }
+```

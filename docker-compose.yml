@@ -16,6 +16,15 @@ services:
       - redis
       - celery
       - celery-beat
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - web
   mydb:
     image: postgres:16-alpine
     environment:

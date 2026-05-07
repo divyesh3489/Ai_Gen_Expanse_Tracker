@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q
+from datetime import timedelta
 
 # Create your models here.
 
@@ -39,6 +40,11 @@ class category(baseModel):
         related_name="categories",
     )
     is_default = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('name', 'user')
+    
+        
 
     def __str__(self):
         return self.name
@@ -105,22 +111,26 @@ class Budget(baseModel):
 
 
 class RrcurringManager(models.Manager):
+    def get_queryset(self):
+        return  super().get_queryset().filter(is_active=True)
+    
     def due_recurrings(self):
         today = timezone.now().date()
-        return self.active_recurrings().filter(Q(next_run_date__lte=today) | Q(next_run_date__isnull=True))
+        return self.get_queryset().filter(Q(next_run_date__lte=today) | Q(next_run_date__isnull=True))
     
-    def active_recurrings(self):
-        return self.filter(is_active=True)
 
     def update_next_run_date(self, recurring):
+        today = timezone.now().date()
         if recurring.next_run_date is None:
-            recurring.next_run_date = recurring.start_date
+            recurring.next_run_date = today 
         if recurring.frequency == "daily":
-            recurring.next_run_date += timezone.timedelta(days=1)
+            if today - recurring.next_run_date > timedelta(days=1):
+                recurring.next_run_date = today
+            else:
+                recurring.next_run_date += timedelta(days=1)
         elif recurring.frequency == "weekly":
-            recurring.next_run_date += timezone.timedelta(weeks=1)
+            recurring.next_run_date += timedelta(days=7)
         elif recurring.frequency == "monthly":
-            # Then replace the placeholder with:
             recurring.next_run_date += relativedelta(months=1)
         elif recurring.frequency == "yearly":
             recurring.next_run_date += relativedelta(years=1) 
@@ -165,5 +175,6 @@ class Recurring(baseModel):
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     is_active = models.BooleanField(default=True)
     recurringObjects = RrcurringManager()
+    objects = models.Manager()  # The default manager.
     
     
