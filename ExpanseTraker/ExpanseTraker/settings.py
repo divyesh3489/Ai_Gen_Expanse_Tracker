@@ -91,7 +91,17 @@ WSGI_APPLICATION = "ExpanseTraker.wsgi.application"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    ),
+    'DEFAULT_THROTTLE_CLASSES' : ['rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'],
+
+    'DEFAULT_THROTTLE_RATES' : {
+        'anon': '100/day',
+        'user': '1000/day',
+        'email_verification': '5/hour',
+    }
+    
+
 }
 from datetime import timedelta
 
@@ -201,6 +211,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "user.User"
 
 DOMAIN = os.getenv("DOMAIN", "http://localhost:8000")
+FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:3000/login")
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
@@ -216,3 +227,14 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+REDIS_CACHE_URL = os.getenv("REDIS_CACHE_URL", "redis://localhost:6379/1")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_CACHE_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
