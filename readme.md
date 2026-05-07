@@ -7,6 +7,23 @@
 - Redis
 - PostgreSQL
 
+### AWS Architecture (Containers + Reverse Proxy)
+
+```text
+Internet
+   │
+   ▼
+Nginx (Reverse Proxy)
+   │
+   ├── Frontend Container (React)
+   └── Django Backend Container
+           │
+           ├── PostgreSQL Container
+           ├── Redis Container
+           ├── Celery Worker
+           └── Celery Beat
+```
+
 
 ## Features ##
 - User Registration

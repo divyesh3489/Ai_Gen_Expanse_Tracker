@@ -1,28 +1,32 @@
-
 services:
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .devenv
-    ports:
-      - "8000:8000"
+      - .env
+    expose:
+      - "8000"
     volumes:
       - ./ExpanseTraker:/app
-    command: sh -c "python manage.py wait_for_db && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: >-
+      sh -c "python manage.py wait_for_db
+      && python manage.py migrate
+      && gunicorn ExpanseTraker.wsgi:application --bind 0.0.0.0:8000"
     depends_on:
       - postgres
       - redis
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - web
+      - celery
+      - celery-beat
 
   postgres:
     image: postgres:16-alpine
@@ -32,18 +36,18 @@ services:
       - POSTGRES_DB=expanse_tracker_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
 
   redis:
     image: redis:latest
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
 
   celery:
     build: .
     env_file:
-      - .devenv
+      - .env
     command: celery -A ExpanseTraker worker --loglevel=info
     volumes:
       - ./ExpanseTraker:/app
@@ -54,7 +58,7 @@ services:
   celery-beat:
     build: .
     env_file:
-      - .devenv
+      - .env
     command: celery -A ExpanseTraker beat --loglevel=info
     volumes:
       - ./ExpanseTraker:/app
@@ -64,3 +68,4 @@ services:
 
 volumes:
   postgres_data: {}
+

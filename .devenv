@@ -1,0 +1,23 @@
+SECRET_KEY='dev-only-change-me'
+DEBUG=True
+production=False
+
+database=name_of_the_database
+user_name=username_of_the_database
+password=password_of_the_database
+host=host_of_the_database
+port=port_of_the_database
+
+DOMAIN=url_of_the_domain
+FRONTEND_LOGIN_URL=url_of_the_frontend
+
+REDIS_URL=url_of_the_redis
+REDIS_CACHE_URL=url_of_the_redis_cache
+
+# Email (optional for local). Fill if you want email verification to work locally.
+EMAIL_HOST=host_of_the_email
+EMAIL_PORT=port_of_the_email
+EMAIL_USE_TLS=True/False
+EMAIL_HOST_USER=username_of_the_email
+EMAIL_HOST_PASSWORD=password_of_the_email
+
