@@ -1,5 +1,17 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { Banknote, CalendarClock, LayoutDashboard, LogOut, PiggyBank, Shapes, Wallet } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  Banknote,
+  CalendarClock,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  PiggyBank,
+  Settings,
+  Shapes,
+  Wallet,
+  X,
+} from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../app/auth/AuthContext'
 import { Button } from '../components/ui/Button'
@@ -11,23 +23,33 @@ const nav = [
   { to: '/app/incomes', label: 'Incomes', icon: Banknote },
   { to: '/app/budgets', label: 'Budgets', icon: PiggyBank },
   { to: '/app/recurring', label: 'Recurring', icon: CalendarClock },
+  { to: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
 export function AppLayout() {
   const { user, logout } = useAuth()
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsMobileNavOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   return (
-    <div className="min-h-dvh bg-slate-50">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
       <div className="mx-auto flex min-h-dvh max-w-7xl">
-        <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
+        <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950">
           <div className="px-5 py-5">
             <Link to="/app" className="flex items-center gap-2">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
-                ET
+              <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-slate-900">
+                <img src="/logo.png" alt="FinStackAI" className="h-full w-full object-cover" />
               </div>
               <div>
-                <div className="text-sm font-semibold text-slate-900">Expanse Tracker</div>
-                <div className="text-xs text-slate-500">Finance dashboard</div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">FinStackAI</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Smart finance, simplified</div>
               </div>
             </Link>
           </div>
@@ -43,7 +65,9 @@ export function AppLayout() {
                   className={({ isActive }) =>
                     clsx(
                       'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
-                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100',
+                      isActive
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40',
                     )
                   }
                 >
@@ -54,9 +78,9 @@ export function AppLayout() {
             })}
           </nav>
 
-          <div className="mt-auto border-t border-slate-200 px-4 py-4">
-            <div className="text-xs text-slate-500">Signed in as</div>
-            <div className="mt-1 truncate text-sm font-medium text-slate-900">{user?.email}</div>
+          <div className="mt-auto border-t border-slate-200 px-4 py-4 dark:border-slate-800">
+            <div className="text-xs text-slate-500 dark:text-slate-400">Signed in as</div>
+            <div className="mt-1 truncate text-sm font-medium text-slate-900 dark:text-slate-50">{user?.email}</div>
             <Button className="mt-3 w-full" variant="secondary" onClick={() => logout()}>
               <LogOut className="mr-2 h-4 w-4" />
               Logout
@@ -65,13 +89,68 @@ export function AppLayout() {
         </aside>
 
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-              <div className="text-sm font-semibold text-slate-900">Expanse Tracker</div>
-              <div className="text-xs text-slate-600">{user?.email}</div>
-            </div>
-            <div className="mx-auto max-w-5xl px-2 pb-3 lg:hidden">
-              <div className="flex gap-2 overflow-x-auto px-2">
+          {/* Mobile nav trigger */}
+          <div className="fixed left-4 top-4 z-40 lg:hidden">
+            <button
+              type="button"
+              aria-label="Open navigation"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white/90 text-slate-900 shadow-sm shadow-slate-900/5 backdrop-blur transition hover:bg-white dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-50 dark:shadow-none dark:hover:bg-slate-950"
+              onClick={() => setIsMobileNavOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Mobile drawer */}
+          <div
+            className={clsx(
+              'fixed inset-0 z-50 lg:hidden',
+              isMobileNavOpen ? 'pointer-events-auto' : 'pointer-events-none',
+            )}
+            aria-hidden={!isMobileNavOpen}
+          >
+            <div
+              className={clsx(
+                'absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity dark:bg-slate-900/50',
+                isMobileNavOpen ? 'opacity-100' : 'opacity-0',
+              )}
+              onClick={() => setIsMobileNavOpen(false)}
+            />
+
+            <div
+              className={clsx(
+                'absolute left-3 right-3 top-3 origin-top rounded-3xl border border-slate-200 bg-white text-slate-900 shadow-2xl shadow-slate-900/10 transition dark:border-slate-800/60 dark:bg-slate-950 dark:text-white dark:shadow-slate-950/40',
+                isMobileNavOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0',
+              )}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex items-center justify-between px-4 py-4">
+                <Link
+                  to="/app"
+                  className="flex items-center gap-3"
+                  onClick={() => setIsMobileNavOpen(false)}
+                >
+                  <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-slate-900">
+                    <img src="/logo.png" alt="FinStackAI" className="h-full w-full object-cover" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">FinStackAI</div>
+                    <div className="text-xs text-slate-500 dark:text-white/60">Smart finance, simplified</div>
+                  </div>
+                </Link>
+
+                <button
+                  type="button"
+                  aria-label="Close navigation"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-900 transition hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  onClick={() => setIsMobileNavOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <nav className="px-2 pb-2">
                 {nav.map((item) => {
                   const Icon = item.icon
                   return (
@@ -79,12 +158,13 @@ export function AppLayout() {
                       key={item.to}
                       to={item.to}
                       end={item.end}
+                      onClick={() => setIsMobileNavOpen(false)}
                       className={({ isActive }) =>
                         clsx(
-                          'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs',
+                          'flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition',
                           isActive
-                            ? 'border-slate-900 bg-slate-900 text-white'
-                            : 'border-slate-200 bg-white text-slate-700',
+                            ? 'bg-slate-900 text-white dark:bg-white/10 dark:text-white'
+                            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:text-white/80 dark:hover:bg-white/5 dark:hover:text-white',
                         )
                       }
                     >
@@ -93,11 +173,27 @@ export function AppLayout() {
                     </NavLink>
                   )
                 })}
+              </nav>
+
+              <div className="border-t border-slate-200 px-4 py-4 dark:border-white/10">
+                <div className="text-xs text-slate-500 dark:text-white/60">Signed in as</div>
+                <div className="mt-1 truncate text-sm font-medium text-slate-900 dark:text-white">{user?.email}</div>
+                <button
+                  type="button"
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  onClick={() => {
+                    setIsMobileNavOpen(false)
+                    logout()
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </button>
               </div>
             </div>
-          </header>
+          </div>
 
-          <div className="mx-auto max-w-5xl px-4 py-6">
+          <div className="mx-auto max-w-5xl px-4 pb-6 pt-20 lg:py-6">
             <Outlet />
           </div>
         </main>

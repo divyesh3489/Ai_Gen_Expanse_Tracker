@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { http } from '../app/api/http'
@@ -37,14 +36,24 @@ export function RegisterPage() {
   }
 
   return (
-    <Card className="p-6">
-      <h2 className="text-xl font-semibold text-slate-900">Create account</h2>
-      <p className="mt-1 text-sm text-slate-600">Register and verify your email to log in.</p>
+    <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-900/5 dark:border-slate-800 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/60">
+      <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">Create account</h2>
+      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Register and verify your email to sign in</p>
 
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-          <Input label="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          <Input
+            label="First name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="First name"
+          />
+          <Input
+            label="Last name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Last name"
+          />
         </div>
         <Input
           label="Email"
@@ -53,6 +62,7 @@ export function RegisterPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          placeholder="Enter your email"
         />
         <Input
           label="Password"
@@ -61,15 +71,16 @@ export function RegisterPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          placeholder="Create a password"
         />
 
         {message ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/25 dark:text-emerald-200">
             {message}
           </div>
         ) : null}
         {error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-950/30 dark:text-rose-200">
             {error}
           </div>
         ) : null}
@@ -77,7 +88,7 @@ export function RegisterPage() {
         <Button className="w-full" type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
-              <Spinner className="mr-2 h-4 w-4 border-white/40 border-t-white" />
+              <Spinner className="mr-2 h-4 w-4 border-white/40 border-t-white dark:border-slate-400/40 dark:border-t-slate-900" />
               Creating…
             </>
           ) : (
@@ -86,13 +97,13 @@ export function RegisterPage() {
         </Button>
       </form>
 
-      <div className="mt-5 text-sm text-slate-600">
+      <div className="mt-5 text-sm text-slate-600 dark:text-slate-300">
         Already have an account?{' '}
-        <Link className="font-medium text-slate-900 hover:underline" to="/login">
+        <Link className="font-medium text-slate-900 hover:underline dark:text-slate-50" to="/login">
           Sign in
         </Link>
       </div>
-    </Card>
+    </div>
   )
 }
 

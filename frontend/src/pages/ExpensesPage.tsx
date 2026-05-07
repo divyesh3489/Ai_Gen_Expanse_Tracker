@@ -73,8 +73,8 @@ export function ExpensesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Expenses</h1>
-        <p className="mt-1 text-sm text-slate-600">Add and review your daily spending.</p>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Expenses</h1>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Add and review your daily spending.</p>
       </div>
 
       <Card className="p-4">
@@ -102,9 +102,9 @@ export function ExpensesPage() {
           }}
         >
           <label className="block lg:col-span-2">
-            <div className="mb-1 text-sm font-medium text-slate-700">Category</div>
+            <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Category</div>
             <select
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50 dark:focus:border-slate-700 dark:focus:ring-slate-300/20"
               value={category}
               onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
             >
@@ -159,15 +159,15 @@ export function ExpensesPage() {
 
       <Card className="p-4">
         {expanses.isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <Spinner /> Loading…
           </div>
         ) : expanses.isError ? (
-          <div className="text-sm text-rose-700">Failed to load expenses.</div>
+          <div className="text-sm text-rose-700 dark:text-rose-200">Failed to load expenses.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500">
+              <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="py-2">Date</th>
                   <th className="py-2">Category</th>
@@ -176,22 +176,22 @@ export function ExpensesPage() {
                   <th className="py-2"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {(expanses.data ?? []).map((e) => (
                   <tr key={e.id} className="align-top">
-                    <td className="py-3 text-slate-700">{e.date}</td>
-                    <td className="py-3 font-medium text-slate-900">
+                    <td className="py-3 text-slate-700 dark:text-slate-200">{e.date}</td>
+                    <td className="py-3 font-medium text-slate-900 dark:text-slate-50">
                       {e.name ??
                         e.category_name ??
                         (e.category ? categoryNameById.get(e.category) ?? `#${e.category}` : '—')}
                     </td>
-                    <td className="py-3 text-slate-700">{e.note ?? '—'}</td>
-                    <td className="py-3 text-right font-semibold text-slate-900">{e.amount}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-200">{e.note ?? '—'}</td>
+                    <td className="py-3 text-right font-semibold text-slate-900 dark:text-slate-50">{e.amount}</td>
                     <td className="py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
-                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100"
+                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40"
                           disabled={remove.isPending || update.isPending}
                           onClick={() => {
                             setEditingId(e.id)
@@ -210,7 +210,7 @@ export function ExpensesPage() {
                         </Button>
                         <Button
                           variant="ghost"
-                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50"
+                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
                           disabled={remove.isPending || update.isPending}
                           onClick={() => remove.mutate(e.id)}
                           aria-label="Delete expense"
@@ -224,7 +224,7 @@ export function ExpensesPage() {
                 ))}
                 {!expanses.data?.length ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-sm text-slate-500">
+                    <td colSpan={5} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
                       No expenses yet.
                     </td>
                   </tr>

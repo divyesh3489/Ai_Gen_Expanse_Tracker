@@ -86,8 +86,8 @@ export function RecurringPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Recurring</h1>
-        <p className="mt-1 text-sm text-slate-600">Automate recurring expenses and incomes.</p>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Recurring</h1>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Automate recurring expenses and incomes.</p>
       </div>
 
       <Card className="p-4">
@@ -111,9 +111,9 @@ export function RecurringPage() {
           }}
         >
           <label className="block lg:col-span-2">
-            <div className="mb-1 text-sm font-medium text-slate-700">Category</div>
+            <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Category</div>
             <select
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50 dark:focus:border-slate-700 dark:focus:ring-slate-300/20"
               value={category}
               onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
             >
@@ -143,9 +143,9 @@ export function RecurringPage() {
           />
 
           <label className="block">
-            <div className="mb-1 text-sm font-medium text-slate-700">Frequency</div>
+            <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Frequency</div>
             <select
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50 dark:focus:border-slate-700 dark:focus:ring-slate-300/20"
               value={frequency}
               onChange={(e) => setFrequency(e.target.value)}
             >
@@ -158,9 +158,9 @@ export function RecurringPage() {
           </label>
 
           <label className="block">
-            <div className="mb-1 text-sm font-medium text-slate-700">Type</div>
+            <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Type</div>
             <select
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50 dark:focus:border-slate-700 dark:focus:ring-slate-300/20"
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
@@ -215,15 +215,15 @@ export function RecurringPage() {
 
       <Card className="p-4">
         {recurring.isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <Spinner /> Loading…
           </div>
         ) : recurring.isError ? (
-          <div className="text-sm text-rose-700">Failed to load recurring entries.</div>
+          <div className="text-sm text-rose-700 dark:text-rose-200">Failed to load recurring entries.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500">
+              <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="py-2">Type</th>
                   <th className="py-2">Category</th>
@@ -234,24 +234,24 @@ export function RecurringPage() {
                   <th className="py-2"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {(recurring.data ?? []).map((r) => (
                   <tr key={r.id} className="align-top">
-                    <td className="py-3 font-medium text-slate-900">{r.type}</td>
-                    <td className="py-3 text-slate-700">
+                    <td className="py-3 font-medium text-slate-900 dark:text-slate-50">{r.type}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-200">
                       {r.name ??
                         r.category_name ??
                         (r.category ? categoryNameById.get(r.category) ?? `#${r.category}` : '—')}
                     </td>
-                    <td className="py-3 text-slate-700">{r.frequency}</td>
-                    <td className="py-3 text-slate-700">{r.start_date}</td>
-                    <td className="py-3 text-slate-700">{r.end_date ?? '—'}</td>
-                    <td className="py-3 text-right font-semibold text-slate-900">{r.amount}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-200">{r.frequency}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-200">{r.start_date}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-200">{r.end_date ?? '—'}</td>
+                    <td className="py-3 text-right font-semibold text-slate-900 dark:text-slate-50">{r.amount}</td>
                     <td className="py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
-                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100"
+                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40"
                           disabled={remove.isPending || update.isPending}
                           onClick={() => {
                             setEditingId(r.id)
@@ -273,7 +273,7 @@ export function RecurringPage() {
                         </Button>
                         <Button
                           variant="ghost"
-                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50"
+                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
                           disabled={remove.isPending || update.isPending}
                           onClick={() => remove.mutate(r.id)}
                           aria-label="Delete recurring"
@@ -287,7 +287,7 @@ export function RecurringPage() {
                 ))}
                 {!recurring.data?.length ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
                       No recurring entries yet.
                     </td>
                   </tr>

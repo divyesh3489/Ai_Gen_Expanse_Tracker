@@ -1,0 +1,49 @@
+import { useEffect, useMemo, useState } from 'react'
+import { ThemeContext } from './ThemeContext'
+import {
+  applyThemeToDocument,
+  getStoredThemePreference,
+  getSystemTheme,
+  storeThemePreference,
+  type ThemePreference,
+} from './theme'
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [preference, setPreferenceState] = useState<ThemePreference>(() => getStoredThemePreference())
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    const pref = getStoredThemePreference()
+    return pref === 'system' ? getSystemTheme() : pref
+  })
+
+  useEffect(() => {
+    const nextResolved = preference === 'system' ? getSystemTheme() : preference
+    setResolvedTheme(nextResolved)
+    applyThemeToDocument(nextResolved)
+    storeThemePreference(preference)
+  }, [preference])
+
+  useEffect(() => {
+    if (preference !== 'system') return
+    const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
+    if (!mql) return
+    const handler = () => {
+      const sys = getSystemTheme()
+      setResolvedTheme(sys)
+      applyThemeToDocument(sys)
+    }
+    mql.addEventListener?.('change', handler)
+    return () => mql.removeEventListener?.('change', handler)
+  }, [preference])
+
+  const value = useMemo(
+    () => ({
+      preference,
+      setPreference: setPreferenceState,
+      resolvedTheme,
+    }),
+    [preference, resolvedTheme],
+  )
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+}
+
