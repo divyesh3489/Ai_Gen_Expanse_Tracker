@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        :root {
+            color-scheme: light dark;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #020617;
+                color: #f8fafc;
+            }
+            .container {
+                background: #0b1220;
+                border-color: #1f2937;
+                box-shadow: none;
+            }
+            h1 { color: #f8fafc; }
+            .message { color: #cbd5e1; }
+            .redirect-info {
+                background: #0f172a;
+                color: #cbd5e1;
+                border-color: #1f2937;
+            }
+            .timer { color: #e2e8f0; }
+            .redirect-button {
+                background: #ffffff;
+                color: #0f172a;
+            }
+            .redirect-button:hover {
+                background: #e2e8f0;
+            }
+        }
+        
+        .container {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px rgba(2, 6, 23, 0.08);
+            text-align: center;
+            padding: 50px 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #16a34a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            animation: scaleIn 0.5s ease-in-out;
+        }
+        
+        .success-icon svg {
+            width: 50px;
+            height: 50px;
+            stroke: white;
+            stroke-width: 3;
+            fill: none;
+        }
+        
+        h1 {
+            color: #0f172a;
+            font-size: 28px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .message {
+            color: #334155;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .redirect-info {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #475569;
+        }
+        
+        .timer {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 20px;
+        }
+        
+        .redirect-button {
+            display: inline-block;
+            background: #0f172a;
+            color: white;
+            padding: 12px 40px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .redirect-button:hover {
+            background: #1f2937;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .checkmark {
+            animation: checkmark 0.6s ease-in-out 0.2s backwards;
+        }
+        
+        @keyframes checkmark {
+            0% {
+                stroke-dashoffset: 100;
+            }
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" class="checkmark">
+                <polyline points="20 6 9 17 4 12" stroke-dasharray="100"></polyline>
+            </svg>
+        </div>
+        
+        <h1>Email Verified!</h1>
+        
+        <p class="message">
+            Congratulations! Your email has been successfully verified.
+        </p>
+        
+        <div class="redirect-info">
+            Redirecting to login page in <span class="timer" id="countdown">5</span> seconds…
+        </div>
+        
+        <button class="redirect-button" onclick="window.location.href='{{ redirect_url }}'">
+            Go to Login Now
+        </button>
+    </div>
+    
+    <script>
+        let seconds = 5;
+        const countdownElement = document.getElementById('countdown');
+        
+        function updateCountdown() {
+            countdownElement.textContent = seconds;
+            
+            if (seconds === 0) {
+                window.location.href = '{{ redirect_url }}';
+            } else {
+                seconds--;
+                setTimeout(updateCountdown, 1000);
+            }
+        }
+        
+        // Start countdown
+        updateCountdown();
+    </script>
+</body>
+</html>

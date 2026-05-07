@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { Input } from '../components/ui/Input'
@@ -9,7 +9,7 @@ import { getErrorMessage } from '../app/api/error'
 import { http } from '../app/api/http'
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const next = new URLSearchParams(location.search).get('next') ?? '/app'
@@ -21,6 +21,10 @@ export function LoginPage() {
   const [needsVerification, setNeedsVerification] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [resendMessage, setResendMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) navigate('/app', { replace: true })
+  }, [isAuthenticated, isLoading, navigate])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()

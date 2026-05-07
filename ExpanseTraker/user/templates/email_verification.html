@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>Verify your email</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        supported-color-schemes: light dark;
+      }
+      /* Brand background "glow" similar to website AuthLayout (sky/indigo blobs). */
+      .bg {
+        background: #f8fafc;
+        background-image:
+          radial-gradient(500px 240px at 50% -80px, rgba(125, 211, 252, 0.35), rgba(255, 255, 255, 0) 60%),
+          radial-gradient(520px 260px at 50% 120%, rgba(199, 210, 254, 0.35), rgba(255, 255, 255, 0) 60%);
+      }
+      .logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #0f172a;
+        display: inline-block;
+      }
+      .logo img {
+        display: block;
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+      }
+      @media (prefers-color-scheme: dark) {
+        .bg {
+          background: #020617 !important;
+          background-image:
+            radial-gradient(520px 260px at 50% -90px, rgba(14, 165, 233, 0.14), rgba(2, 6, 23, 0) 60%),
+            radial-gradient(520px 260px at 50% 120%, rgba(99, 102, 241, 0.16), rgba(2, 6, 23, 0) 60%) !important;
+        }
+        .card { background: #0b1220 !important; border-color: #1f2937 !important; box-shadow: none !important; }
+        .muted { color: #cbd5e1 !important; }
+        .text { color: #f8fafc !important; }
+        .subtle { color: #94a3b8 !important; }
+        .code { background: #0f172a !important; border-color: #1f2937 !important; color: #e2e8f0 !important; }
+        .btn { background: #ffffff !important; color: #0f172a !important; }
+        .footer { background: #0b1220 !important; border-top-color: #1f2937 !important; }
+      }
+    </style>
+  </head>
+  <body style="margin:0; padding:0; background:#f8fafc;" class="bg">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f8fafc; padding:24px 0;" class="bg">
+      <tr>
+        <td align="center" style="padding:0 16px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px; max-width:100%; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 10px 25px rgba(2, 6, 23, 0.08);" class="card">
+            <tr>
+              <td style="padding:22px 26px; border-bottom:1px solid #e2e8f0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td valign="middle" style="padding:0;">
+                      <span class="logo">
+                        <img src="cid:finstackai_logo" alt="FinStackAI" />
+                      </span>
+                    </td>
+                    <td valign="middle" style="padding:0 0 0 10px;">
+                      <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size:14px; line-height:18px; font-weight:700; color:#0f172a;" class="text">
+                        FinStackAI
+                      </div>
+                      <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:16px; color:#64748b;" class="subtle">
+                        Smart finance, simplified
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:26px;">
+                <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size:18px; line-height:24px; font-weight:700; color:#0f172a;" class="text">
+                  Verify your email
+                </div>
+                <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#0f172a; font-size:16px; line-height:24px;" class="text">
+                  Hi{% if user and user.first_name %} {{ user.first_name }}{% endif %},
+                </div>
+                <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#334155; font-size:14px; line-height:22px; margin-top:10px;" class="muted">
+                  Thanks for signing up to <strong>FinStackAI</strong>. Please confirm your email address by clicking the button below.
+                </div>
+
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 10px;">
+                  <tr>
+                    <td align="left">
+                      <a
+                        href="{{ verification_link }}"
+                        style="display:inline-block; background:#0f172a; color:#ffffff; text-decoration:none; font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size:14px; line-height:18px; font-weight:600; padding:12px 18px; border-radius:12px;"
+                        class="btn"
+                      >
+                        Verify email
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#64748b; font-size:12px; line-height:18px; margin-top:10px;" class="subtle">
+                  If the button doesn’t work, copy and paste this link into your browser:
+                </div>
+                <div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color:#0f172a; font-size:12px; line-height:18px; margin-top:8px; word-break:break-all; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px;" class="code">
+                  {{ verification_link }}
+                </div>
+
+                <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#64748b; font-size:12px; line-height:18px; margin-top:16px;" class="subtle">
+                  If you didn’t create an account, you can safely ignore this email.
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 26px; background:#f8fafc; border-top:1px solid #e2e8f0;" class="footer">
+                <div style="font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#94a3b8; font-size:12px; line-height:18px;">
+                  © {{ app_name }}. This is an automated message, please don’t reply.
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+

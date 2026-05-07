@@ -20,9 +20,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (payload: { email: string; password: string }) => {
-    const res = await http.post<{ access: string; refresh: string }>('/v1/user/login/', payload)
-    setTokens({ access: res.data.access, refresh: res.data.refresh })
-    await refreshMe()
+    setIsLoading(true)
+    try {
+      const res = await http.post<{ access: string; refresh: string }>('/v1/user/login/', payload)
+      setTokens({ access: res.data.access, refresh: res.data.refresh })
+      await refreshMe()
+    } finally {
+      setIsLoading(false)
+    }
   }, [refreshMe])
 
   const logout = useCallback(async () => {

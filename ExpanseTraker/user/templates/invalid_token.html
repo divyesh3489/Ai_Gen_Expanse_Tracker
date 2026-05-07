@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invalid verification link</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        :root {
+            color-scheme: light dark;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #020617;
+                color: #f8fafc;
+            }
+            .container {
+                background: #0b1220;
+                border-color: #1f2937;
+                box-shadow: none;
+            }
+            h1 { color: #f8fafc; }
+            .message { color: #cbd5e1; }
+            .hint {
+                background: #0f172a;
+                color: #cbd5e1;
+                border-color: #1f2937;
+            }
+            .redirect-button {
+                background: #ffffff;
+                color: #0f172a;
+            }
+            .redirect-button:hover {
+                background: #e2e8f0;
+            }
+        }
+        
+        .container {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px rgba(2, 6, 23, 0.08);
+            text-align: center;
+            padding: 46px 38px;
+            max-width: 520px;
+            width: 100%;
+        }
+        
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: #f97316;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 28px;
+        }
+        
+        .icon svg {
+            width: 42px;
+            height: 42px;
+            stroke: white;
+            stroke-width: 2.5;
+            fill: none;
+        }
+        
+        h1 {
+            color: #0f172a;
+            font-size: 26px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .message {
+            color: #334155;
+            font-size: 15px;
+            margin-bottom: 18px;
+            line-height: 1.65;
+        }
+
+        .hint {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 14px 14px;
+            border-radius: 12px;
+            margin: 0 auto 22px;
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.6;
+            text-align: left;
+        }
+        
+        .redirect-button {
+            display: inline-block;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 12px 22px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            text-decoration: none;
+        }
+        
+        .redirect-button:hover {
+            background: #1f2937;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 9v4"></path>
+                <path d="M12 17h.01"></path>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            </svg>
+        </div>
+        
+        <h1>Link not valid</h1>
+        
+        <p class="message">
+            This verification link is invalid or has already been used.
+        </p>
+        
+        <div class="hint">
+            <strong>What you can do:</strong>
+            <ul style="margin:10px 0 0 18px;">
+                <li>Request a new verification email from the app.</li>
+                <li>Or go back to the login page and try again.</li>
+            </ul>
+        </div>
+        
+        <a class="redirect-button" href="{{ redirect_url }}">
+            Go to Login
+        </a>
+    </div>
+</body>
+</html>
+

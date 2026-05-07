@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .devenv
+      - .env
     ports:
       - "8000:8000"
     volumes:
@@ -43,7 +43,7 @@ services:
   celery:
     build: .
     env_file:
-      - .devenv
+      - .env
     command: celery -A ExpanseTraker worker --loglevel=info
     volumes:
       - ./ExpanseTraker:/app
@@ -54,7 +54,7 @@ services:
   celery-beat:
     build: .
     env_file:
-      - .devenv
+      - .env
     command: celery -A ExpanseTraker beat --loglevel=info
     volumes:
       - ./ExpanseTraker:/app

@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", False)
 
-ALLOWED_HOSTS = ["13.232.150.67","expansetraker.eliscops.com"]
+ALLOWED_HOSTS = ["13.232.150.67","expansetraker.eliscops.com","localhost","127.0.0.1"]
 
 
 
@@ -222,6 +222,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+
+# Media files (user uploads / publicly served assets)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

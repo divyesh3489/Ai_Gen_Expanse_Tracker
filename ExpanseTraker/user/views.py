@@ -69,15 +69,19 @@ class VerifyUser(APIView):
             user.is_verified = True
             user.save()
             verification_token.delete()
-            return Response(
-                status=status.HTTP_308_PERMANENT_REDIRECT,
-                headers={"Location": settings.FRONTEND_LOGIN_URL},
-            )
+            
+            # Render success template with auto-redirect
+            context = {
+                'redirect_url': settings.FRONTEND_LOGIN_URL
+            }
+            return render(request, 'email_verified.html', context)
+            
         except VerificationToken.DoesNotExist:
-            return Response(
-                {"error": "Invalid or expired token"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            context = {
+                'redirect_url': settings.FRONTEND_LOGIN_URL,
+                'app_name': 'ExpanseTraker',
+            }
+            return render(request, 'invalid_token.html', context, status=400)
 
 class ResendVerificationEmail(APIView):
     throttle_classes = [ScopedRateThrottle]

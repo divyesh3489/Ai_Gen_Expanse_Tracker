@@ -1,12 +1,15 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { http } from '../app/api/http'
 import { Spinner } from '../components/ui/Spinner'
 import { getErrorMessage } from '../app/api/error'
+import { useAuth } from '../app/auth/AuthContext'
 
 export function RegisterPage() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -14,6 +17,10 @@ export function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) navigate('/app', { replace: true })
+  }, [isAuthenticated, isLoading, navigate])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
