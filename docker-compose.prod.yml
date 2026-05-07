@@ -9,6 +9,7 @@ services:
     volumes:
       - letsencrypt:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot
+      - staticfiles:/staticfiles:ro
     depends_on:
       - web
 
@@ -30,9 +31,11 @@ services:
       - "8000"
     volumes:
       - ./ExpanseTraker:/app
+      - staticfiles:/app/staticfiles
     command: >-
       sh -c "python manage.py wait_for_db
       && python manage.py migrate
+      && python manage.py collectstatic --noinput
       && gunicorn ExpanseTraker.wsgi:application --bind 0.0.0.0:8000"
     depends_on:
       - postgres
@@ -82,4 +85,5 @@ volumes:
   postgres_data: {}
   letsencrypt: {}
   certbot-webroot: {}
+  staticfiles: {}
 
