@@ -21,7 +21,7 @@ def send_verification_email(user_id):
                 token = VerificationToken.objects.create(
                     user=user, token=get_random_string(32)
                 )
-            verification_link = f"{settings.DOMAIN}/api/v1/user/verify/{token.token}/"
+            verification_link = f"{settings.DOMAIN}api/v1/user/verify/{token.token}/"
 
             send_mail(
                 "Verify Your Account",
