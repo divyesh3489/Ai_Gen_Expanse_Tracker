@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", False)
 
-ALLOWED_HOSTS = ["65.0.95.85","expansetraker.eliscops.com"]
+ALLOWED_HOSTS = ["13.232.150.67","expansetraker.eliscops.com"]
 
 
 
@@ -64,15 +64,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://expansetraker.eliscops.com",
-    "http://65.0.95.85",
+    "http://13.232.150.67",
     "https://expansetraker.eliscops.com",
-    "https://65.0.95.85",
+    "https://13.232.150.67",
 ]
 
 # If you ever use cookie-based auth (session/CSRF cookies), Django requires trusted origins
 # for HTTPS POST/PUT/PATCH/DELETE requests coming from your frontend domain.
 CSRF_TRUSTED_ORIGINS = [
     "https://expansetraker.eliscops.com",
+    "https://13.232.150.67",
 ]
 
 INSTALLED_APPS += custom_apps
