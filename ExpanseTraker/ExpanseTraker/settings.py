@@ -33,7 +33,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["65.0.95.85","expansetraker.eliscops.com"]
+
+
 
 
 # Application definition
@@ -55,6 +57,22 @@ custom_apps = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     'django_celery_beat',
+    'corsheaders',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://expansetraker.eliscops.com",
+    "http://65.0.95.85",
+    "https://expansetraker.eliscops.com",
+    "https://65.0.95.85",
+]
+
+# If you ever use cookie-based auth (session/CSRF cookies), Django requires trusted origins
+# for HTTPS POST/PUT/PATCH/DELETE requests coming from your frontend domain.
+CSRF_TRUSTED_ORIGINS = [
+    "https://expansetraker.eliscops.com",
 ]
 
 INSTALLED_APPS += custom_apps
@@ -62,6 +80,7 @@ INSTALLED_APPS += custom_apps
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
