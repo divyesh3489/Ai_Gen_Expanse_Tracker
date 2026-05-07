@@ -5,8 +5,20 @@ services:
       dockerfile: nginx/Dockerfile
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
     depends_on:
       - web
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    # renewal loop (safe to keep running)
+    command: sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
 
   web:
     build:
@@ -68,4 +80,6 @@ services:
 
 volumes:
   postgres_data: {}
+  letsencrypt: {}
+  certbot-webroot: {}
 
