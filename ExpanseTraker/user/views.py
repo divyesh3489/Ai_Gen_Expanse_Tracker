@@ -9,7 +9,7 @@ from .models import User, VerificationToken
 from .serializers import UserSerializer
 from .tasks import send_verification_email
 from rest_framework.throttling import ScopedRateThrottle
-
+from .utils import s3
 # Create your views here.
 
 
@@ -39,6 +39,19 @@ class UserDetails(APIView):
             )
         serializer = UserSerializer(queryset.first())
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def patch(self, request):
+        user = request.user
+        queryset = User.active_objects.filter(id=user.id)
+        if not queryset.exists():
+            return Response(
+                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = UserSerializer(queryset.first(), data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -104,3 +117,26 @@ class ResendVerificationEmail(APIView):
             status=status.HTTP_200_OK,
         )
      
+
+class UploadProfilePicture(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        file = request.FILES.get("profile_picture")
+        if not file:
+            return Response(
+                {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        file_url = s3.upload_profile_picture_to_s3(file, user.id)
+        if not file_url:
+            return Response(
+                {"error": "Failed to upload profile picture"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        user.profile_picture = file_url
+        user.save()
+        return Response(
+            {"message": "Profile picture uploaded successfully", "profile_picture": file_url},
+            status=status.HTTP_200_OK,
+        )

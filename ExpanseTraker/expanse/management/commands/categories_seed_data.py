@@ -8,16 +8,40 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         categories = [
-            "Food",
-            "Transport",
-            "Housing",
-            "Utilities",
-            "Healthcare",
-            "Entertainment",
-            "Education",
-            "Savings",
-            "Personal Care",
-            "Other",
+            [
+    "Food",
+    "Transport",
+    "Housing",
+    "Utilities",
+    "Healthcare",
+    "Entertainment",
+    "Education",
+    "Savings",
+    "Personal Care",
+    "Other",
+
+    "Shopping",
+    "Travel",
+    "Insurance",
+    "Taxes",
+    "Groceries",
+    "Dining Out",
+    "Fitness",
+    "Subscriptions",
+    "Gifts",
+    "Pets",
+
+    "Childcare",
+    "Investments",
+    "Debt Payments",
+    "Mobile & Internet",
+    "Clothing",
+    "Home Maintenance",
+    "Furniture",
+    "Electronics",
+    "Beauty",
+    "Donations"
+]
         ]
 
         created = 0

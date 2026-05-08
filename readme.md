@@ -124,8 +124,10 @@ The Recurring model is used to store recurring expenses and incomes.
 - `POST /api/v1/user/token/refresh/` - Refresh access token
 - `POST /api/v1/user/logout/` - Logout (blacklist refresh token)
 - `GET  /api/v1/user/me/` - Get user profile (auth required)
+- `PATCH /api/v1/user/me/` - Update user profile (auth required)
 - `GET  /api/v1/user/verify/<str:token>/` - Verify user email
 - `POST /api/v1/user/resend-verification/` - Resend verification email
+- `POST /api/v1/user/upload-profile-picture/` - Upload profile picture (auth required)
 
 ### Categories (`/api/v1/expanse/`)
 - `GET /api/v1/expanse/categories/` - Get all categories
@@ -200,6 +202,7 @@ Request body:
 
 
 ### AWS Architectural diagram ###
+```
 Internet
    │
    ▼
@@ -211,4 +214,6 @@ Nginx (Reverse Proxy)
            ├── PostgreSQL Container
            ├── Redis Container
            ├── Celery Worker
+           ├── S3 (for media storage)
            └── Celery Beat
+```

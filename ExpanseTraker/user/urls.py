@@ -13,5 +13,6 @@ urlpatterns = [
     path("logout/", TokenBlacklistView.as_view(), name="token_blacklist"),
     path("me/", views.UserDetails.as_view(), name="user_detail"),
     path("verify/<str:token>/", views.VerifyUser.as_view(), name="verify_user"),
-    path("resend-verification/", views.ResendVerificationEmail.as_view(), name="resend_verification")
+    path("resend-verification/", views.ResendVerificationEmail.as_view(), name="resend_verification"),
+    path("upload-profile-picture/", views.UploadProfilePicture.as_view(), name="upload_profile_picture"),
 ]
