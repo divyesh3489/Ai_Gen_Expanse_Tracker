@@ -92,6 +92,11 @@ export function LoginPage() {
           required
           placeholder="Enter your password"
         />
+        <div className="-mt-1 text-right">
+          <Link className="text-sm font-medium text-slate-900 hover:underline dark:text-slate-50" to="/forgot-password">
+            Forgot password?
+          </Link>
+        </div>
 
         {error ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-950/30 dark:text-rose-200">

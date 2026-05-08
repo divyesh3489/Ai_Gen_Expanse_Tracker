@@ -29,3 +29,13 @@ export async function uploadProfilePicture(file: File) {
   return res.data
 }
 
+export async function requestPasswordReset(email: string) {
+  const res = await http.post<{ message?: string }>('/v1/user/request-password-reset/', { email })
+  return res.data
+}
+
+export async function resetPassword(payload: { token: string; new_password: string }) {
+  const res = await http.post<{ message?: string }>('/v1/user/reset-password/', payload)
+  return res.data
+}
+

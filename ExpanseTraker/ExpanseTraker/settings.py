@@ -120,6 +120,7 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/day',
         'email_verification': '5/hour',
+        'password_reset': '5/minute',
     }
     
 
@@ -238,6 +239,7 @@ AUTH_USER_MODEL = "user.User"
 
 DOMAIN = os.getenv("DOMAIN", "http://localhost:8000")
 FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:3000/login")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")

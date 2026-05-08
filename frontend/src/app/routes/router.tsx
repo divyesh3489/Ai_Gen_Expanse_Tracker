@@ -4,6 +4,8 @@ import { AuthLayout } from '../../layouts/AuthLayout'
 import { AppLayout } from '../../layouts/AppLayout'
 import { LoginPage } from '../../pages/LoginPage'
 import { RegisterPage } from '../../pages/RegisterPage'
+import { ForgotPasswordPage } from '../../pages/ForgotPasswordPage'
+import { ResetPasswordPage } from '../../pages/ResetPasswordPage'
 import { DashboardPage } from '../../pages/DashboardPage'
 import { CategoriesPage } from '../../pages/CategoriesPage'
 import { ExpensesPage } from '../../pages/ExpensesPage'
@@ -21,6 +23,8 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
     ],
   },
   {

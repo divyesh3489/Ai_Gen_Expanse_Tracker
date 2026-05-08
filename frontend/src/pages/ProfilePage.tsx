@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
 import { getErrorMessage } from '../app/api/error'
 import { useAuth } from '../app/auth/AuthContext'
-import { getMe, patchMe, uploadProfilePicture, type UpdateMePayload } from '../features/user/api'
+import { getMe, patchMe, requestPasswordReset, uploadProfilePicture, type UpdateMePayload } from '../features/user/api'
 
 export function ProfilePage() {
   const { user, refreshMe } = useAuth()
@@ -54,14 +54,25 @@ export function ProfilePage() {
     },
   })
 
+  const passwordResetMutation = useMutation({
+    mutationFn: (email: string) => requestPasswordReset(email),
+    onSuccess: (res) => {
+      setError(null)
+      setSuccess(res.message || 'Password reset link sent. Please check your email.')
+    },
+    onError: (err: unknown) => {
+      setSuccess(null)
+      setError(getErrorMessage(err, 'Failed to send password reset link.'))
+    },
+  })
+
   const isBusy = isMeLoading || updateMutation.isPending || uploadMutation.isPending
 
-  const previewName = useMemo(() => {
-    const full =
-      (typeof me?.full_name === 'string' && me.full_name.trim()) ||
-      `${me?.first_name ?? ''} ${me?.last_name ?? ''}`.trim()
-    return full || me?.email || 'User'
-  }, [me?.email, me?.first_name, me?.full_name, me?.last_name])
+  const previewName =
+    (typeof me?.full_name === 'string' && me.full_name.trim()) ||
+    `${me?.first_name ?? ''} ${me?.last_name ?? ''}`.trim() ||
+    me?.email ||
+    'User'
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -95,6 +106,18 @@ export function ProfilePage() {
     setError(null)
     setSuccess(null)
     uploadMutation.mutate(file)
+  }
+
+  function onSendPasswordReset() {
+    const email = me?.email || user?.email
+    if (!email) {
+      setSuccess(null)
+      setError('Email not available for this account.')
+      return
+    }
+    setError(null)
+    setSuccess(null)
+    passwordResetMutation.mutate(email)
   }
 
   return (
@@ -215,6 +238,32 @@ export function ProfilePage() {
             )}
           </Button>
         </form>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Reset password</div>
+            <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              We’ll email you a password reset link.
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onSendPasswordReset}
+            disabled={passwordResetMutation.isPending}
+          >
+            {passwordResetMutation.isPending ? (
+              <>
+                <Spinner className="mr-2 h-4 w-4 border-slate-400/40 border-t-slate-700" />
+                Sending…
+              </>
+            ) : (
+              'Send reset email'
+            )}
+          </Button>
+        </div>
       </Card>
     </div>
   )

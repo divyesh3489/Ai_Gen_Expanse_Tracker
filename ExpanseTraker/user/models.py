@@ -1,3 +1,6 @@
+from django.utils import  timezone
+from datetime import timedelta
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.conf import settings
@@ -72,4 +75,13 @@ class VerificationToken(models.Model):
         User, on_delete=models.CASCADE, related_name="verification_tokens"
     )
     token = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="password_reset_tokens"
+    )
+    token = models.CharField(max_length=255)
+    expires_at = models.DateTimeField(default=timezone.now() + timedelta(minutes=15))
     created_at = models.DateTimeField(auto_now_add=True)
