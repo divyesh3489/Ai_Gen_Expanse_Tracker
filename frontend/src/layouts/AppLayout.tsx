@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   Banknote,
   CalendarClock,
+  CircleUser,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -23,12 +24,19 @@ const nav = [
   { to: '/app/incomes', label: 'Incomes', icon: Banknote },
   { to: '/app/budgets', label: 'Budgets', icon: PiggyBank },
   { to: '/app/recurring', label: 'Recurring', icon: CalendarClock },
+  { to: '/app/profile', label: 'Profile', icon: CircleUser },
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
 export function AppLayout() {
   const { user, logout } = useAuth()
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+
+  const signedInLabel =
+    (typeof user?.full_name === 'string' && user.full_name.trim()) ||
+    `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() ||
+    user?.email ||
+    ''
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -80,7 +88,12 @@ export function AppLayout() {
 
           <div className="mt-auto border-t border-slate-200 px-4 py-4 dark:border-slate-800">
             <div className="text-xs text-slate-500 dark:text-slate-400">Signed in as</div>
-            <div className="mt-1 truncate text-sm font-medium text-slate-900 dark:text-slate-50">{user?.email}</div>
+            <Link
+              to="/app/profile"
+              className="mt-1 block truncate text-sm font-medium text-slate-900 hover:underline dark:text-slate-50"
+            >
+              {signedInLabel}
+            </Link>
             <Button className="mt-3 w-full" variant="secondary" onClick={() => logout()}>
               <LogOut className="mr-2 h-4 w-4" />
               Logout
@@ -177,7 +190,13 @@ export function AppLayout() {
 
               <div className="border-t border-slate-200 px-4 py-4 dark:border-white/10">
                 <div className="text-xs text-slate-500 dark:text-white/60">Signed in as</div>
-                <div className="mt-1 truncate text-sm font-medium text-slate-900 dark:text-white">{user?.email}</div>
+                <Link
+                  to="/app/profile"
+                  className="mt-1 block truncate text-sm font-medium text-slate-900 hover:underline dark:text-white"
+                  onClick={() => setIsMobileNavOpen(false)}
+                >
+                  {signedInLabel}
+                </Link>
                 <button
                   type="button"
                   className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"

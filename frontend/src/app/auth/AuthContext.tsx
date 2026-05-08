@@ -8,6 +8,8 @@ export type User = {
   gender?: string | null
   dob?: string | null
   is_verified?: boolean
+  full_name?: string
+  profile_picture?: string | null
 }
 
 export type AuthContextValue = {
