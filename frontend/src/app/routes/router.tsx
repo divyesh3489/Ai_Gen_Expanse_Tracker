@@ -4,6 +4,8 @@ import { AuthLayout } from '../../layouts/AuthLayout'
 import { AppLayout } from '../../layouts/AppLayout'
 import { LoginPage } from '../../pages/LoginPage'
 import { RegisterPage } from '../../pages/RegisterPage'
+import { ForgotPasswordPage } from '../../pages/ForgotPasswordPage'
+import { ResetPasswordPage } from '../../pages/ResetPasswordPage'
 import { DashboardPage } from '../../pages/DashboardPage'
 import { CategoriesPage } from '../../pages/CategoriesPage'
 import { ExpensesPage } from '../../pages/ExpensesPage'
@@ -11,6 +13,7 @@ import { IncomesPage } from '../../pages/IncomesPage'
 import { BudgetsPage } from '../../pages/BudgetsPage'
 import { RecurringPage } from '../../pages/RecurringPage'
 import { SettingsPage } from '../../pages/SettingsPage'
+import { ProfilePage } from '../../pages/ProfilePage'
 import { NotFoundPage } from '../../pages/NotFoundPage'
 
 export const router = createBrowserRouter([
@@ -20,6 +23,8 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
     ],
   },
   {
@@ -35,6 +40,7 @@ export const router = createBrowserRouter([
           { path: 'incomes', element: <IncomesPage /> },
           { path: 'budgets', element: <BudgetsPage /> },
           { path: 'recurring', element: <RecurringPage /> },
+          { path: 'profile', element: <ProfilePage /> },
           { path: 'settings', element: <SettingsPage /> },
         ],
       },

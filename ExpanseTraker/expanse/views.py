@@ -257,7 +257,7 @@ class RecurringDetailView(APIView):
                 {"detail": "Recurring entry not found."}, status=status.HTTP_404_NOT_FOUND
             )
         serializer = self.serializer_class(
-            reccuring_instance, data=request.data, context={"request": request}
+            reccuring_instance, data=request.data, context={"request": request}, partial=True
         )
         if serializer.is_valid():
             serializer.save()

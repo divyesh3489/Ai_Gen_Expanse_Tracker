@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.shortcuts import render
 from django.conf import settings
 from rest_framework import status
@@ -5,11 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import  TokenObtainPairView
-from .models import User, VerificationToken
+from .models import User, VerificationToken , PasswordResetToken
 from .serializers import UserSerializer
-from .tasks import send_verification_email
+from .tasks import send_verification_email,send_password_reset_email
 from rest_framework.throttling import ScopedRateThrottle
-
+from .utils import s3
 # Create your views here.
 
 
@@ -39,7 +40,59 @@ class UserDetails(APIView):
             )
         serializer = UserSerializer(queryset.first())
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def patch(self, request):
+        user = request.user
+        queryset = User.active_objects.filter(id=user.id)
+        if not queryset.exists():
+            return Response(
+                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = UserSerializer(queryset.first(), data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class RequestPasswordReset(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+    def post(self, request):
+        email = request.data.get("email")
+        user = User.active_objects.filter(email=email).first()
+        if not user or not user.is_active :
+            return Response(
+                {"error": "User with this email does not exist"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         
+        send_password_reset_email.delay(user.id)
+        return Response(
+            {"message": "Password reset link sent successfully"},
+            status=status.HTTP_200_OK,
+        )
+
+class ResetPasswordView(APIView):
+        def post(self, request):
+            toekn = request.data.get("token")
+            new_password = request.data.get("new_password")
+            token_qs = PasswordResetToken.objects.filter(token=toekn, expires_at__gt=timezone.now()).order_by("-created_at")
+            print(token_qs)
+            if not token_qs.exists():
+                return Response(
+                    {"error": "Invalid or expired token"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            token = token_qs.first()
+            user = token.user
+            user.set_password(new_password)
+            user.save()
+            token.delete()
+            return Response(
+                {"message": "Password reset successfully"},
+                status=status.HTTP_200_OK,  
+            )
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
@@ -104,3 +157,26 @@ class ResendVerificationEmail(APIView):
             status=status.HTTP_200_OK,
         )
      
+
+class UploadProfilePicture(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        file = request.FILES.get("profile_picture")
+        if not file:
+            return Response(
+                {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        file_url = s3.upload_profile_picture_to_s3(file, user.id)
+        if not file_url:
+            return Response(
+                {"error": "Failed to upload profile picture"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        user.profile_picture = file_url
+        user.save()
+        return Response(
+            {"message": "Profile picture uploaded successfully", "profile_picture": file_url},
+            status=status.HTTP_200_OK,
+        )

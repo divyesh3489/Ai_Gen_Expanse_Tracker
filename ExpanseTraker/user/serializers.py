@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -16,11 +16,14 @@ class UserSerializer(serializers.ModelSerializer):
             "gender",
             "dob",
             "full_name",
+            "profile_picture",
         ]
         extra_kwargs = {
             "password": {"write_only": True},
             "email": {"required": True},
             "full_name": {"read_only": True},
+            "profile_picture": {"read_only": True},
+            "read_only_fields": ["full_name", "profile_picture", "is_verified", "is_active", "is_staff", "is_superuser"],
         }
 
     def create(self, validated_data):
@@ -30,3 +33,13 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
         user.save()
         return user
+
+    def update(self, instance, validated_data):
+        print("Update called with validated_data:", validated_data)
+        if "password" in validated_data:
+            raise ValidationError("Password cannot be updated through this endpoint.")
+    
+        if "email" in validated_data:
+           raise ValidationError("Email cannot be changed.")
+    
+        return super().update(instance, validated_data)    

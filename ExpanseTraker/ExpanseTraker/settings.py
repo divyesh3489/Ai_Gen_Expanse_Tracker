@@ -53,6 +53,7 @@ custom_apps = [
     "user",
     "expanse",
     'core',
+    "storages",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -119,6 +120,7 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/day',
         'email_verification': '5/hour',
+        'password_reset': '5/minute',
     }
     
 
@@ -237,6 +239,7 @@ AUTH_USER_MODEL = "user.User"
 
 DOMAIN = os.getenv("DOMAIN", "http://localhost:8000")
 FRONTEND_LOGIN_URL = os.getenv("FRONTEND_LOGIN_URL", "http://localhost:3000/login")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
@@ -253,6 +256,14 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 REDIS_CACHE_URL = os.getenv("REDIS_CACHE_URL", "redis://localhost:6379/1")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-south-1")
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None  
+AWS_S3_FILE_OVERWRITE = False
+AWS_S3_SIGNATURE_VERSION = "s3v4"
 
 CACHES = {
     "default": {

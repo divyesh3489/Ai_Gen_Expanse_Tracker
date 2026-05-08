@@ -16,11 +16,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   })
 
   useEffect(() => {
-    const nextResolved = preference === 'system' ? getSystemTheme() : preference
-    setResolvedTheme(nextResolved)
-    applyThemeToDocument(nextResolved)
-    storeThemePreference(preference)
-  }, [preference])
+    applyThemeToDocument(resolvedTheme)
+  }, [resolvedTheme])
 
   useEffect(() => {
     if (preference !== 'system') return
@@ -35,10 +32,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mql.removeEventListener?.('change', handler)
   }, [preference])
 
+  function setPreference(next: ThemePreference) {
+    setPreferenceState(next)
+    storeThemePreference(next)
+    const nextResolved = next === 'system' ? getSystemTheme() : next
+    setResolvedTheme(nextResolved)
+    applyThemeToDocument(nextResolved)
+  }
+
   const value = useMemo(
     () => ({
       preference,
-      setPreference: setPreferenceState,
+      setPreference,
       resolvedTheme,
     }),
     [preference, resolvedTheme],
