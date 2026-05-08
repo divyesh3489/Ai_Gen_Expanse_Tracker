@@ -8,7 +8,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         categories = [
-            [
     "Food",
     "Transport",
     "Housing",
@@ -41,7 +40,6 @@ class Command(BaseCommand):
     "Electronics",
     "Beauty",
     "Donations"
-]
         ]
 
         created = 0
