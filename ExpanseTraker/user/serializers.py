@@ -9,6 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            "id",
             "email",
             "password",
             "first_name",
@@ -17,13 +18,21 @@ class UserSerializer(serializers.ModelSerializer):
             "dob",
             "full_name",
             "profile_picture",
+            "is_staff",
+            "is_superuser",
+        ]
+        read_only_fields = [
+            "id",
+            "full_name",
+            "profile_picture",
+            "is_staff",
+            "is_superuser",
         ]
         extra_kwargs = {
             "password": {"write_only": True},
             "email": {"required": True},
             "full_name": {"read_only": True},
             "profile_picture": {"read_only": True},
-            "read_only_fields": ["full_name", "profile_picture", "is_verified", "is_active", "is_staff", "is_superuser"],
         }
 
     def create(self, validated_data):

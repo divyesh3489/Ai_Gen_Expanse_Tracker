@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { queryClient } from '../app/queryClient'
 import { Button } from '../components/ui/Button'
@@ -7,6 +7,8 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
 import { listCategories } from '../features/categories/api'
+import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
+import { CategoryDisplay } from '../features/categories/CategoryDisplay'
 import { createRecurring, deleteRecurring, listRecurring, updateRecurring } from '../features/recurring/api'
 
 function todayISO() {
@@ -26,20 +28,38 @@ export function RecurringPage() {
   const [frequency, setFrequency] = useState('monthly')
   const [type, setType] = useState('expense')
 
-  const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
+  const expenseCategories = useQuery({
+    queryKey: ['categories', 'expense'],
+    queryFn: () => listCategories({ type: 'expense' }),
+  })
+  const incomeCategories = useQuery({
+    queryKey: ['categories', 'income'],
+    queryFn: () => listCategories({ type: 'income' }),
+  })
   const recurring = useQuery({ queryKey: ['recurring'], queryFn: listRecurring })
+
+  const categoriesForSelect = type === 'expense' ? expenseCategories : incomeCategories
 
   const categoryNameById = useMemo(() => {
     const map = new Map<number, string>()
-    for (const c of categories.data ?? []) map.set(c.id, c.name)
+    for (const c of expenseCategories.data ?? []) map.set(c.id, c.name)
+    for (const c of incomeCategories.data ?? []) map.set(c.id, c.name)
     return map
-  }, [categories.data])
+  }, [expenseCategories.data, incomeCategories.data])
 
   const categoryIdByName = useMemo(() => {
     const map = new Map<string, number>()
-    for (const c of categories.data ?? []) map.set(c.name.toLowerCase(), c.id)
+    for (const c of expenseCategories.data ?? []) map.set(c.name.toLowerCase(), c.id)
+    for (const c of incomeCategories.data ?? []) map.set(c.name.toLowerCase(), c.id)
     return map
-  }, [categories.data])
+  }, [expenseCategories.data, incomeCategories.data])
+
+  useEffect(() => {
+    const list = type === 'expense' ? expenseCategories.data : incomeCategories.data
+    if (!list) return
+    const ids = new Set(list.map((c) => c.id))
+    if (category !== '' && !ids.has(category)) setCategory('')
+  }, [type, expenseCategories.data, incomeCategories.data, category])
 
   const create = useMutation({
     mutationFn: createRecurring,
@@ -118,7 +138,7 @@ export function RecurringPage() {
               onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
             >
               <option value="">Uncategorized</option>
-              {(categories.data ?? []).map((c) => (
+              {(categoriesForSelect.data ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -162,7 +182,10 @@ export function RecurringPage() {
             <select
               className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-400/20 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50 dark:focus:border-slate-700 dark:focus:ring-slate-300/20"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => {
+                setType(e.target.value)
+                setCategory('')
+              }}
             >
               {TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -239,9 +262,12 @@ export function RecurringPage() {
                   <tr key={r.id} className="align-top">
                     <td className="py-3 font-medium text-slate-900 dark:text-slate-50">{r.type}</td>
                     <td className="py-3 text-slate-700 dark:text-slate-200">
-                      {r.name ??
-                        r.category_name ??
-                        (r.category ? categoryNameById.get(r.category) ?? `#${r.category}` : '—')}
+                      <CategoryDisplay
+                        variant="table"
+                        label={displayCategoryLabel(r, categoryNameById, '—')}
+                        preferenceKey={preferenceKeyFromRow(r, categoryNameById)}
+                        listColor={r.category_color}
+                      />
                     </td>
                     <td className="py-3 text-slate-700 dark:text-slate-200">{r.frequency}</td>
                     <td className="py-3 text-slate-700 dark:text-slate-200">{r.start_date}</td>

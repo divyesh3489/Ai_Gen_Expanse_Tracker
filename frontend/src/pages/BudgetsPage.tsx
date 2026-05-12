@@ -7,6 +7,8 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
 import { listCategories } from '../features/categories/api'
+import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
+import { CategoryDisplay } from '../features/categories/CategoryDisplay'
 import { createBudget, deleteBudget, listBudgets, updateBudget } from '../features/budgets/api'
 
 function monthStartISO() {
@@ -28,7 +30,10 @@ export function BudgetsPage() {
   const [startDate, setStartDate] = useState(monthStartISO())
   const [endDate, setEndDate] = useState(monthEndISO())
 
-  const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
+  const categories = useQuery({
+    queryKey: ['categories', 'expense'],
+    queryFn: () => listCategories({ type: 'expense' }),
+  })
   const budgets = useQuery({ queryKey: ['budgets'], queryFn: listBudgets })
 
   const categoryNameById = useMemo(() => {
@@ -184,9 +189,12 @@ export function BudgetsPage() {
                 {(budgets.data ?? []).map((b) => (
                   <tr key={b.id} className="align-top">
                     <td className="py-3 font-medium text-slate-900 dark:text-slate-50">
-                      {b.name ??
-                        b.category_name ??
-                        (b.category ? categoryNameById.get(b.category) ?? `#${b.category}` : 'All')}
+                      <CategoryDisplay
+                        variant="table"
+                        label={displayCategoryLabel(b, categoryNameById, 'All')}
+                        preferenceKey={preferenceKeyFromRow(b, categoryNameById)}
+                        listColor={b.category_color}
+                      />
                     </td>
                     <td className="py-3 text-slate-700 dark:text-slate-200">
                       {b.start_date} → {b.end_date}

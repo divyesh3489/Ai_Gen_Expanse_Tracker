@@ -5,6 +5,7 @@ export type Expanse = {
   // Backward-compatible shape
   category?: number | null
   category_name?: string
+  category_color?: string
   amount: string
   note?: string | null
   date: string

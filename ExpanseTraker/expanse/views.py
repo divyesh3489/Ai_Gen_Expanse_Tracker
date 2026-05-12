@@ -3,101 +3,132 @@ from django.shortcuts import render
 from rest_framework import status
 
 # Create your views here.
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Budget, Expanse, Income, category,Recurring
-from .serializers import BudgetSerializer, CategorySerializer, ExpanseSerializer, IncomeSerializer, RecurringSerializer
+from .models import Budget, Expanse, Income, Category,Recurring,UserCategoryPreference
+from .serializers import BudgetSerializer, CategorySerializer, ExpanseSerializer, IncomeSerializer, RecurringSerializer, UserCategoryPreferenceSerializer
 
 
 class CategoryView(APIView):
-    permission_classes = [IsAuthenticated]
     serializer_class = CategorySerializer
-
+    
+    def get_permissions(self):
+        if self.request.method in ['POST']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+    
     def get(self, request):
-        categorys = category.objects.filter(Q(user=request.user) | Q(is_default=True))
-        serializer = self.serializer_class(categorys, many=True)
+        type_filter = request.query_params.get("type")
+        if type_filter in ["expense", "income"]:
+            categorys = Category.objects.filter(type=type_filter)
+        else:
+            categorys = Category.objects.all()
+        serializer = self.serializer_class(categorys, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = self.serializer_class(
-            data=request.data, context={"request": request}
-        )
+        serializer = self.serializer_class(data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class CategoryDetailView(APIView):
-    permission_classes = [IsAuthenticated]
     serializer_class = CategorySerializer
 
+    def get_permissions(self):
+        if self.request.method in ['PUT', 'DELETE']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
     def get(self, request, pk):
-        category_instance = category.objects.filter(
-            (Q(user=request.user) | Q(is_default=True)) & Q(id=pk)
-        )
-        print(category_instance)
-        if not category_instance.exists():
+        category_instance = Category.objects.filter(id=pk).first()
+        if not category_instance:
             return Response(
                 {"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        category_instance = category_instance.first()
-        serializer = self.serializer_class(category_instance)
+        serializer = self.serializer_class(category_instance, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-
+    
     def delete(self, request, pk):
-        try:
-            category_instance = category.objects.filter(Q(user=request.user) & Q(id=pk))
-            if not category_instance.exists():
-                return Response(
-                    {"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND
-                )
-            category_instance = category_instance.first()
-            if category_instance.is_default:
-                return Response(
-                    {"detail": "Cannot delete a default category."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            category_instance.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except:
+        category_instance = Category.objects.filter(id=pk).first()
+        if not category_instance:
             return Response(
-                {"detail": "An error occurred while trying to delete the category."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND
             )
-
-    def patch(self, request, pk):
-        try:
-            category_instance = category.objects.filter(Q(user=request.user) & Q(id=pk))
-            if not category_instance.exists():
-                return Response(
-                    {"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND
-                )
-            category_instance = category_instance.first()
-            if category_instance.is_default:
-                return Response(
-                    {"detail": "Cannot update a default category."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            serializer = self.serializer_class(
-                category_instance,
-                data=request.data,
-                context={"request": request},
-                partial=True,
-            )
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print(f"Error updating category: {e}")
+        category_instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def put(self, request, pk):
+        category_instance = Category.objects.filter(id=pk).first()
+        if not category_instance:
             return Response(
-                {"detail": "An error occurred while trying to update the category."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND
             )
+        serializer = self.serializer_class(category_instance, data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class UserCategoryPreferenceView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserCategoryPreferenceSerializer
+
+    def get(self, request):
+        default_categories = Category.objects.all().order_by("type", "name")
+        preferences = UserCategoryPreference.objects.filter(user=request.user).select_related("category")
+        pref_dict = {pref.category_id: pref for pref in preferences}
+        results = []
+        for cat in default_categories:
+            pref = pref_dict.get(cat.id)
+            results.append(
+                {
+                    "id": pref.id if pref else None,
+                    "category": cat.id,
+                    "category_name": cat.name,
+                    "custom_color": pref.custom_color if pref else cat.default_color,
+                    "default_color": cat.default_color,
+                    "icon": cat.icon,
+                }
+            )
+        return Response(results, status=status.HTTP_200_OK)
+    
+   
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class DetailUserCategoryPreferenceView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserCategoryPreferenceSerializer
+
+    def put(self, request, pk):
+        pref_instance = UserCategoryPreference.objects.filter(user=request.user, id=pk).first()
+        if not pref_instance:
+            return Response(
+                {"detail": "User category preference not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = self.serializer_class(pref_instance, data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        pref_instance = UserCategoryPreference.objects.filter(user=request.user, id=pk).first()
+        if not pref_instance:
+            return Response(
+                {"detail": "User category preference not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        pref_instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ExpanseView(APIView):
     permission_classes = [IsAuthenticated]

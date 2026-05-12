@@ -7,6 +7,8 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
 import { listCategories } from '../features/categories/api'
+import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
+import { CategoryDisplay } from '../features/categories/CategoryDisplay'
 import { createExpanse, deleteExpanse, listExpanses, updateExpanse } from '../features/expanses/api'
 
 function todayISO() {
@@ -20,7 +22,10 @@ export function ExpensesPage() {
   const [note, setNote] = useState('')
   const [date, setDate] = useState(todayISO())
 
-  const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
+  const categories = useQuery({
+    queryKey: ['categories', 'expense'],
+    queryFn: () => listCategories({ type: 'expense' }),
+  })
   const expanses = useQuery({ queryKey: ['expanses'], queryFn: listExpanses })
 
   const categoryNameById = useMemo(() => {
@@ -181,9 +186,12 @@ export function ExpensesPage() {
                   <tr key={e.id} className="align-top">
                     <td className="py-3 text-slate-700 dark:text-slate-200">{e.date}</td>
                     <td className="py-3 font-medium text-slate-900 dark:text-slate-50">
-                      {e.name ??
-                        e.category_name ??
-                        (e.category ? categoryNameById.get(e.category) ?? `#${e.category}` : '—')}
+                      <CategoryDisplay
+                        variant="table"
+                        label={displayCategoryLabel(e, categoryNameById, '—')}
+                        preferenceKey={preferenceKeyFromRow(e, categoryNameById)}
+                        listColor={e.category_color}
+                      />
                     </td>
                     <td className="py-3 text-slate-700 dark:text-slate-200">{e.note ?? '—'}</td>
                     <td className="py-3 text-right font-semibold text-slate-900 dark:text-slate-50">{e.amount}</td>

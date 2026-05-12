@@ -9,6 +9,8 @@ urlpatterns = [
         views.CategoryDetailView.as_view(),
         name="category_detail",
     ),
+    path("user-category-preferences/", views.UserCategoryPreferenceView.as_view(), name="user_category_preferences"),
+    path("user-category-preferences/<int:pk>/", views.DetailUserCategoryPreferenceView.as_view(), name="user_category_preference_detail"),
     path("expanses/", views.ExpanseView.as_view(), name="expanses"),
     path(
         "expanses/<int:pk>/", views.ExpanseDetailView.as_view(), name="expanse_detail"

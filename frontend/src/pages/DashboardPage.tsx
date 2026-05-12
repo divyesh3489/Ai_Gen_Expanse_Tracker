@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { Card } from '../components/ui/Card'
 import { listBudgets } from '../features/budgets/api'
+import { listCategories } from '../features/categories/api'
+import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
+import { CategoryDisplay } from '../features/categories/CategoryDisplay'
 import { listExpanses } from '../features/expanses/api'
 import { listIncomes } from '../features/incomes/api'
 
@@ -12,6 +16,16 @@ export function DashboardPage() {
   const expanses = useQuery({ queryKey: ['expanses'], queryFn: listExpanses })
   const incomes = useQuery({ queryKey: ['incomes'], queryFn: listIncomes })
   const budgets = useQuery({ queryKey: ['budgets'], queryFn: listBudgets })
+  const categories = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => listCategories(),
+  })
+
+  const categoryNameById = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const c of categories.data ?? []) map.set(c.id, c.name)
+    return map
+  }, [categories.data])
 
   const expanseTotal = sumAmount(expanses.data ?? [])
   const incomeTotal = sumAmount(incomes.data ?? [])
@@ -52,12 +66,20 @@ export function DashboardPage() {
           <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Recent expenses</div>
           <div className="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
             {(expanses.data ?? []).slice(0, 5).map((e) => (
-              <div key={e.id} className="flex items-center justify-between py-2 text-sm">
-                <div className="min-w-0">
-                  <div className="truncate font-medium text-slate-900 dark:text-slate-50">{e.note ?? 'Expense'}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">{e.date}</div>
+              <div key={e.id} className="flex items-start justify-between gap-3 py-2 text-sm">
+                <div className="min-w-0 flex-1">
+                  <CategoryDisplay
+                    variant="card"
+                    label={displayCategoryLabel(e, categoryNameById, '—')}
+                    preferenceKey={preferenceKeyFromRow(e, categoryNameById)}
+                    listColor={e.category_color}
+                  />
+                  {e.note ? (
+                    <div className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-300">{e.note}</div>
+                  ) : null}
+                  <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{e.date}</div>
                 </div>
-                <div className="shrink-0 font-semibold text-slate-900 dark:text-slate-50">{e.amount}</div>
+                <div className="shrink-0 pt-0.5 font-semibold text-slate-900 dark:text-slate-50">{e.amount}</div>
               </div>
             ))}
             {!expanses.data?.length ? (
@@ -70,12 +92,20 @@ export function DashboardPage() {
           <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Recent incomes</div>
           <div className="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
             {(incomes.data ?? []).slice(0, 5).map((e) => (
-              <div key={e.id} className="flex items-center justify-between py-2 text-sm">
-                <div className="min-w-0">
-                  <div className="truncate font-medium text-slate-900 dark:text-slate-50">{e.note ?? 'Income'}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">{e.date}</div>
+              <div key={e.id} className="flex items-start justify-between gap-3 py-2 text-sm">
+                <div className="min-w-0 flex-1">
+                  <CategoryDisplay
+                    variant="card"
+                    label={displayCategoryLabel(e, categoryNameById, '—')}
+                    preferenceKey={preferenceKeyFromRow(e, categoryNameById)}
+                    listColor={e.category_color}
+                  />
+                  {e.note ? (
+                    <div className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-300">{e.note}</div>
+                  ) : null}
+                  <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{e.date}</div>
                 </div>
-                <div className="shrink-0 font-semibold text-slate-900 dark:text-slate-50">{e.amount}</div>
+                <div className="shrink-0 pt-0.5 font-semibold text-slate-900 dark:text-slate-50">{e.amount}</div>
               </div>
             ))}
             {!incomes.data?.length ? (
@@ -87,4 +117,3 @@ export function DashboardPage() {
     </div>
   )
 }
-

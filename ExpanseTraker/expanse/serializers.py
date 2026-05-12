@@ -1,60 +1,88 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from .models import Budget, Expanse, Income, category,Recurring
+from .models import Budget, Expanse, Income, Category,Recurring,  UserCategoryPreference
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = category
-        fields = ["id", "name", "is_default"]
-        extra_kwargs = {"is_default": {"read_only": True}}
+    color = serializers.SerializerMethodField()
 
+    class Meta:
+        model = Category
+        fields = ["id", "name", "type", "icon", "color", "default_color"]
+        extra_kwargs = {
+            "name": {"required": True, "allow_blank": False},
+            "type": {"required": True, "allow_blank": False},
+            "icon": {"required": True, "allow_blank": False},
+        }
+
+    def get_color(self, obj):
+        user = self.context["request"].user
+        try:
+            preference = UserCategoryPreference.objects.get(user=user, category=obj)
+            return preference.custom_color if preference.custom_color else obj.default_color
+        except UserCategoryPreference.DoesNotExist:
+            return obj.default_color
+    
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["created_by"] = user
         validated_data["updated_by"] = user
-        # Remove is_default if present since it's read-only
-        validated_data.pop("is_default", None)
-        return category.objects.create(user=user, **validated_data)
-
-    def validate_name(self, value):
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-
-        normalized = (value or "").strip().capitalize()
-        if not normalized:
-            raise ValidationError("Name is required.")
-
-        if user and category.objects.filter(user=user, name=normalized).exists():
-            raise ValidationError("Category already exists.")
-
-        if category.objects.filter(is_default=True, name=normalized).exists():
-            raise ValidationError("Default category already exists.")
-
-        return normalized
+        return Category.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         user = self.context["request"].user
-        if instance.is_default:
-            raise ValidationError("Cannot update a default category.")
-        # Remove is_default from validated_data if present since it's read-only
-        instance.name = validated_data.get("name", instance.name).capitalize()
+        instance.name = validated_data.get("name", instance.name)
+        instance.type = validated_data.get("type", instance.type)
+        instance.icon = validated_data.get("icon", instance.icon)
+        instance.default_color = validated_data.get("default_color", instance.default_color)
         instance.updated_by = user
         instance.save()
         return instance
 
-
-class ExpanseSerializer(serializers.ModelSerializer):
+class UserCategoryPreferenceSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
+        model = UserCategoryPreference
+        fields = ["id", "category", "category_name", "custom_color"]
+        extra_kwargs = {
+            "category": {"required": True, "allow_null": False, "write_only": True}
+        }
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        validated_data["user"] = user
+        created_by = user
+        updated_by = user   
+        return UserCategoryPreference.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.custom_color = validated_data.get("custom_color", instance.custom_color)
+        created_by = instance.created_by
+        updated_by = self.context["request"].user
+        instance.save()
+        return instance     
+
+class ExpanseSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    category_color = serializers.SerializerMethodField()
+
+    class Meta:
         model = Expanse
-        fields = ["id", "category", "category_name", "amount", "note", "date"]
+        fields = ["id", "category", "category_name", "category_color", "amount", "note", "date"]
         extra_kwargs = {
             "category": {"required": False, "allow_null": True, "write_only": True}
         }
 
+    def get_category_color(self, obj):
+        try:
+            user = obj.user
+            preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
+            return preference.custom_color if preference.custom_color else obj.category.default_color
+        except UserCategoryPreference.DoesNotExist:
+            return obj.category.default_color
+    
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["created_by"] = user
@@ -74,14 +102,23 @@ class ExpanseSerializer(serializers.ModelSerializer):
 
 class IncomeSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
+    category_color = serializers.SerializerMethodField()
 
     class Meta:
         model = Income
-        fields = ["id", "category", "category_name", "amount", "note", "date"]
+        fields = ["id", "category", "category_name", "category_color", "amount", "note", "date"]
         extra_kwargs = {
             "category": {"required": False, "allow_null": True, "write_only": True}
         }
 
+    def get_category_color(self, obj):
+        try:
+            user = obj.user
+            preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
+            return preference.custom_color if preference.custom_color else obj.category.default_color
+        except UserCategoryPreference.DoesNotExist:
+            return obj.category.default_color
+        
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["created_by"] = user
@@ -101,14 +138,22 @@ class IncomeSerializer(serializers.ModelSerializer):
 
 class BudgetSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
-
+    category_color = serializers.SerializerMethodField()
     class Meta:
         model = Budget
-        fields = ["id", "category", "category_name", "amount", "start_date", "end_date"]
+        fields = ["id", "category", "category_name", "category_color", "amount", "start_date", "end_date"]
         extra_kwargs = {
             "category": {"required": False, "allow_null": True, "write_only": True}
         }
 
+    def get_category_color(self, obj):
+        try:
+            user = obj.user
+            preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
+            return preference.custom_color if preference.custom_color else obj.category.default_color
+        except UserCategoryPreference.DoesNotExist:
+            return obj.category.default_color
+    
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["created_by"] = user
@@ -129,11 +174,19 @@ class RecurringSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.email", read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
-
+    category_color = serializers.SerializerMethodField()
     class Meta:
         model = Recurring
-        fields = ['id','user','user_name','category','category_name','amount','note','start_date','end_date','next_run_date','frequency','type']
-            
+        fields = ['id','user','user_name','category','category_name','category_color','amount','note','start_date','end_date','next_run_date','frequency','type']
+
+    def get_category_color(self, obj):  
+        try:
+            user = obj.user
+            preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
+            return preference.custom_color if preference.custom_color else obj.category.default_color
+        except UserCategoryPreference.DoesNotExist:
+            return obj.category.default_color
+     
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["created_by"] = user
