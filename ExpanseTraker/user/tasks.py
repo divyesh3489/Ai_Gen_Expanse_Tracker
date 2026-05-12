@@ -77,7 +77,7 @@ def send_password_reset_email(user_id):
                 token = token_qs.first()
             else:
                 token = PasswordResetToken.objects.create(
-                    user=user, token=get_random_string(32)
+                    user=user, token=get_random_string(32), expires_at=timezone.now() + timezone.timedelta(minutes=15)
                 )
             base_domain = (settings.FRONTEND_URL or "").rstrip("/")
             reset_link = (
