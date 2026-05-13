@@ -28,6 +28,7 @@ function mergeRow(
 
 type CardProps = {
   row: UserCategoryPreferenceRow
+  categoryType?: 'expense' | 'income'
   saving: boolean
   justSaved: boolean
   resetPending: boolean
@@ -35,7 +36,15 @@ type CardProps = {
   onReset: () => Promise<void>
 }
 
-function CategoryPreferenceCard({ row, saving, justSaved, resetPending, onCommit, onReset }: CardProps) {
+function CategoryPreferenceCard({
+  row,
+  categoryType,
+  saving,
+  justSaved,
+  resetPending,
+  onCommit,
+  onReset,
+}: CardProps) {
   const [displayColor, setDisplayColor] = useState(row.custom_color)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onCommitRef = useRef(onCommit)
@@ -74,6 +83,9 @@ function CategoryPreferenceCard({ row, saving, justSaved, resetPending, onCommit
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{row.category_name}</div>
+          {categoryType ? (
+            <div className="mt-0.5 text-xs capitalize text-slate-500 dark:text-slate-400">{categoryType}</div>
+          ) : null}
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span className="font-mono">{displayColor}</span>
             {justSaved ? (
@@ -133,8 +145,8 @@ export function CategoryPreferencesPage() {
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const categories = useQuery({
-    queryKey: ['categories', 'expense'],
-    queryFn: () => listCategories({ type: 'expense' }),
+    queryKey: ['categories'],
+    queryFn: () => listCategories(),
   })
 
   const preferences = useQuery({
@@ -142,11 +154,17 @@ export function CategoryPreferencesPage() {
     queryFn: listUserCategoryPreferences,
   })
 
-  const expenseIdSet = useMemo(() => new Set((categories.data ?? []).map((c) => c.id)), [categories.data])
+  const categoryIdSet = useMemo(() => new Set((categories.data ?? []).map((c) => c.id)), [categories.data])
 
-  const expensePreferenceRows = useMemo(
-    () => (preferences.data ?? []).filter((r) => expenseIdSet.has(r.category)),
-    [preferences.data, expenseIdSet],
+  const typeByCategoryId = useMemo(() => {
+    const m = new Map<number, 'expense' | 'income'>()
+    for (const c of categories.data ?? []) m.set(c.id, c.type)
+    return m
+  }, [categories.data])
+
+  const preferenceRows = useMemo(
+    () => (preferences.data ?? []).filter((r) => categoryIdSet.has(r.category)),
+    [preferences.data, categoryIdSet],
   )
 
   const bumpSaved = useCallback((categoryId: number) => {
@@ -241,7 +259,7 @@ export function CategoryPreferencesPage() {
 
   const resetAll = useCallback(async () => {
     const rows = queryClient.getQueryData<UserCategoryPreferenceRow[]>(USER_CATEGORY_PREFERENCES_QUERY_KEY) ?? []
-    const toDelete = rows.filter((r) => r.id != null && expenseIdSet.has(r.category))
+    const toDelete = rows.filter((r) => r.id != null && categoryIdSet.has(r.category))
     if (!toDelete.length) {
       setResetAllOpen(false)
       return
@@ -257,7 +275,7 @@ export function CategoryPreferencesPage() {
       }
       queryClient.setQueryData<UserCategoryPreferenceRow[]>(USER_CATEGORY_PREFERENCES_QUERY_KEY, (prev) =>
         (prev ?? []).map((row) =>
-          expenseIdSet.has(row.category) && row.id != null
+          categoryIdSet.has(row.category) && row.id != null
             ? { ...row, id: null, custom_color: row.default_color }
             : row,
         ),
@@ -270,7 +288,7 @@ export function CategoryPreferencesPage() {
     } finally {
       setResetAllPending(false)
     }
-  }, [expenseIdSet, queryClient])
+  }, [categoryIdSet, queryClient])
 
   const isInitialLoading = preferences.isLoading || categories.isLoading
   const loadError = preferences.isError || categories.isError
@@ -288,7 +306,7 @@ export function CategoryPreferencesPage() {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Category colors</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Choose a tint for each expense category. Changes apply across the app.
+            Choose a tint for each category (expense and income). Changes apply across the app.
           </p>
         </div>
         <Button
@@ -299,10 +317,10 @@ export function CategoryPreferencesPage() {
             resetAllPending ||
             isInitialLoading ||
             loadError ||
-            !expensePreferenceRows.some((r) => r.id != null)
+            !preferenceRows.some((r) => r.id != null)
           }
           title={
-            expensePreferenceRows.some((r) => r.id != null)
+            preferenceRows.some((r) => r.id != null)
               ? undefined
               : 'No custom colors to reset'
           }
@@ -333,10 +351,11 @@ export function CategoryPreferencesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {expensePreferenceRows.map((row) => (
+          {preferenceRows.map((row) => (
             <CategoryPreferenceCard
               key={row.category}
               row={row}
+              categoryType={typeByCategoryId.get(row.category)}
               saving={savingCategories.has(row.category)}
               resetPending={resettingCategories.has(row.category)}
               justSaved={savedPulse === row.category}
@@ -347,8 +366,8 @@ export function CategoryPreferencesPage() {
         </div>
       )}
 
-      {!isInitialLoading && !loadError && !expensePreferenceRows.length ? (
-        <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">No expense categories found.</div>
+      {!isInitialLoading && !loadError && !preferenceRows.length ? (
+        <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">No categories found.</div>
       ) : null}
 
       {resetAllOpen ? (
@@ -363,7 +382,7 @@ export function CategoryPreferencesPage() {
           <Card className="relative z-10 w-full max-w-md border border-slate-200 p-6 shadow-2xl dark:border-slate-800">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Reset all category colors?</h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              This removes your custom colors for every expense category and restores each one to its default.
+              This removes your custom colors for every category and restores each one to its default.
             </p>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="secondary" disabled={resetAllPending} onClick={() => setResetAllOpen(false)}>

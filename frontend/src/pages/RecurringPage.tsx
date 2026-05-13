@@ -1,16 +1,18 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import { queryClient } from '../app/queryClient'
 import { Button } from '../components/ui/Button'
 import { RowActionButton } from '../components/ui/RowActionButton'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
+import { useCursorPagination } from '../hooks/useCursorPagination'
+import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel'
 import { listCategories } from '../features/categories/api'
 import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
 import { CategoryDisplay } from '../features/categories/CategoryDisplay'
-import { createRecurring, deleteRecurring, listRecurring, updateRecurring } from '../features/recurring/api'
+import { createRecurring, deleteRecurring, updateRecurring } from '../features/recurring/api'
+import type { Recurring } from '../features/recurring/types'
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -18,6 +20,24 @@ function todayISO() {
 
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly']
 const TYPES = ['expense', 'income']
+
+function TableSkeleton({ cols }: { cols: number }) {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex gap-3 border-b border-slate-100 py-3 dark:border-slate-800/80">
+          {Array.from({ length: cols }).map((__, j) => (
+            <div
+              key={j}
+              className="h-4 flex-1 animate-pulse rounded bg-slate-200 dark:bg-slate-700"
+              style={{ maxWidth: j === cols - 1 ? '6rem' : undefined }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function RecurringPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -37,7 +57,24 @@ export function RecurringPage() {
     queryKey: ['categories', 'income'],
     queryFn: () => listCategories({ type: 'income' }),
   })
-  const recurring = useQuery({ queryKey: ['recurring'], queryFn: listRecurring })
+
+  const {
+    results: recurring,
+    loading,
+    initialLoading,
+    error,
+    errorMessage,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useCursorPagination<Recurring>('/v1/expanse/recurring/', {}, { pageSize: 20 })
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useInfiniteScrollSentinel(
+    sentinelRef,
+    { hasMore, loading, initialLoading, loadMore },
+    recurring.length,
+  )
 
   const categoriesForSelect = type === 'expense' ? expenseCategories : incomeCategories
 
@@ -68,7 +105,7 @@ export function RecurringPage() {
       setAmount('')
       setNote('')
       setEditingId(null)
-      await queryClient.invalidateQueries({ queryKey: ['recurring'] })
+      await refresh()
     },
   })
 
@@ -93,14 +130,14 @@ export function RecurringPage() {
       setEndDate('')
       setFrequency('monthly')
       setType('expense')
-      await queryClient.invalidateQueries({ queryKey: ['recurring'] })
+      await refresh()
     },
   })
 
   const remove = useMutation({
     mutationFn: deleteRecurring,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['recurring'] })
+      await refresh()
     },
   })
 
@@ -238,92 +275,122 @@ export function RecurringPage() {
       </Card>
 
       <Card className="p-4">
-        {recurring.isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <Spinner /> Loading…
+        {initialLoading ? (
+          <TableSkeleton cols={7} />
+        ) : error && recurring.length === 0 ? (
+          <div className="space-y-3">
+            <div className="text-sm text-rose-700 dark:text-rose-200">{errorMessage ?? 'Failed to load recurring entries.'}</div>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void refresh()}>
+              Retry
+            </Button>
           </div>
-        ) : recurring.isError ? (
-          <div className="text-sm text-rose-700 dark:text-rose-200">Failed to load recurring entries.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="py-2">Type</th>
-                  <th className="py-2">Category</th>
-                  <th className="py-2">Frequency</th>
-                  <th className="py-2">Start</th>
-                  <th className="py-2">End</th>
-                  <th className="py-2 text-right">Amount</th>
-                  <th className="min-w-[6rem] py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {(recurring.data ?? []).map((r) => (
-                  <tr
-                    key={r.id}
-                    className="group transition-colors hover:bg-slate-50/90 dark:hover:bg-slate-800/45"
-                  >
-                    <td className="py-3 align-middle font-medium text-slate-900 dark:text-slate-50">{r.type}</td>
-                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">
-                      <CategoryDisplay
-                        variant="table"
-                        label={displayCategoryLabel(r, categoryNameById, '—')}
-                        preferenceKey={preferenceKeyFromRow(r, categoryNameById)}
-                        listColor={r.category_color}
-                      />
-                    </td>
-                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.frequency}</td>
-                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.start_date}</td>
-                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.end_date ?? '—'}</td>
-                    <td className="py-3 align-middle text-right font-semibold text-slate-900 dark:text-slate-50">
-                      {r.amount}
-                    </td>
-                    <td className="min-w-[6rem] py-3 text-right align-middle">
-                      <div className="flex items-center justify-end gap-2">
-                        <RowActionButton
-                          variant="edit"
-                          icon={Pencil}
-                          disabled={remove.isPending || update.isPending}
-                          onClick={() => {
-                            setEditingId(r.id)
-                            setAmount(String(r.amount ?? ''))
-                            setNote(String(r.note ?? ''))
-                            setStartDate(String(r.start_date ?? todayISO()))
-                            setEndDate(String(r.end_date ?? ''))
-                            setFrequency(String(r.frequency ?? 'monthly'))
-                            setType(String(r.type ?? 'expense'))
-                            const idFromNumber = typeof r.category === 'number' ? r.category : null
-                            const label = (r.name ?? r.category_name)?.toString().toLowerCase()
-                            const idFromLabel = label ? (categoryIdByName.get(label) ?? null) : null
-                            setCategory(idFromNumber ?? idFromLabel ?? '')
-                          }}
-                          aria-label="Edit recurring"
-                        />
-                        <RowActionButton
-                          variant="delete"
-                          icon={Trash2}
-                          disabled={remove.isPending || update.isPending}
-                          onClick={() => remove.mutate(r.id)}
-                          aria-label="Delete recurring"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!recurring.data?.length ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                      No recurring entries yet.
-                    </td>
+                    <th className="py-2">Type</th>
+                    <th className="py-2">Category</th>
+                    <th className="py-2">Frequency</th>
+                    <th className="py-2">Start</th>
+                    <th className="py-2">End</th>
+                    <th className="py-2 text-right">Amount</th>
+                    <th className="min-w-[6rem] py-2"></th>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {recurring.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="group transition-colors hover:bg-slate-50/90 dark:hover:bg-slate-800/45"
+                    >
+                      <td className="py-3 align-middle font-medium text-slate-900 dark:text-slate-50">{r.type}</td>
+                      <td className="py-3 align-middle text-slate-700 dark:text-slate-200">
+                        <CategoryDisplay
+                          variant="table"
+                          label={displayCategoryLabel(r, categoryNameById, '—')}
+                          preferenceKey={preferenceKeyFromRow(r, categoryNameById)}
+                          listColor={r.category_color}
+                        />
+                      </td>
+                      <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.frequency}</td>
+                      <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.start_date}</td>
+                      <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.end_date ?? '—'}</td>
+                      <td className="py-3 align-middle text-right font-semibold text-slate-900 dark:text-slate-50">
+                        {r.amount}
+                      </td>
+                      <td className="min-w-[6rem] py-3 text-right align-middle">
+                        <div className="flex items-center justify-end gap-2">
+                          <RowActionButton
+                            variant="edit"
+                            icon={Pencil}
+                            disabled={remove.isPending || update.isPending}
+                            onClick={() => {
+                              setEditingId(r.id)
+                              setAmount(String(r.amount ?? ''))
+                              setNote(String(r.note ?? ''))
+                              setStartDate(String(r.start_date ?? todayISO()))
+                              setEndDate(String(r.end_date ?? ''))
+                              setFrequency(String(r.frequency ?? 'monthly'))
+                              setType(String(r.type ?? 'expense'))
+                              const idFromNumber = typeof r.category === 'number' ? r.category : null
+                              const label = (r.name ?? r.category_name)?.toString().toLowerCase()
+                              const idFromLabel = label ? (categoryIdByName.get(label) ?? null) : null
+                              setCategory(idFromNumber ?? idFromLabel ?? '')
+                            }}
+                            aria-label="Edit recurring"
+                          />
+                          <RowActionButton
+                            variant="delete"
+                            icon={Trash2}
+                            disabled={remove.isPending || update.isPending}
+                            onClick={() => remove.mutate(r.id)}
+                            aria-label="Delete recurring"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!recurring.length && !error ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                        No recurring entries yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            {hasMore ? (
+              <div ref={sentinelRef} className="mt-4 h-3 w-full shrink-0" aria-hidden />
+            ) : null}
+
+            {!hasMore && recurring.length > 0 ? (
+              <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                All records loaded ({recurring.length} shown)
+              </p>
+            ) : null}
+
+            {error && recurring.length > 0 ? (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <div className="text-sm text-rose-700 dark:text-rose-200">{errorMessage ?? 'Could not load more.'}</div>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void refresh()}>
+                  Retry
+                </Button>
+              </div>
+            ) : null}
+
+            {!initialLoading && loading && recurring.length > 0 ? (
+              <div className="mt-4 flex justify-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <Spinner className="h-4 w-4 border-slate-300 border-t-slate-700 dark:border-slate-600 dark:border-t-slate-200" />
+                Loading more…
+              </div>
+            ) : null}
+          </>
         )}
       </Card>
     </div>
   )
 }
-

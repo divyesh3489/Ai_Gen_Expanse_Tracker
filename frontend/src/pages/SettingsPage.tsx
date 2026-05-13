@@ -56,7 +56,7 @@ export function SettingsPage() {
                 Category colors
               </div>
               <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                Set your own color for each expense category across charts and lists.
+                Set your own color for each category (expense and income) across charts and lists.
               </div>
             </div>
           </div>

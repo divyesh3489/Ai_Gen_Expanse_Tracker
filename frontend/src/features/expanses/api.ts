@@ -1,9 +1,14 @@
 import { http } from '../../app/api/http'
+import { compactRequestParams, extractResults, type ExtractedPage } from '../../utils/pagination'
 import type { Expanse } from './types'
 
-export async function listExpanses() {
-  const res = await http.get<Expanse[]>('/v1/expanse/expanses/')
-  return res.data
+export async function listExpanses(
+  params?: { page_size?: number; cursor?: string | null },
+): Promise<ExtractedPage<Expanse>> {
+  const res = await http.get('/v1/expanse/expanses/', {
+    params: compactRequestParams(params ?? {}),
+  })
+  return extractResults<Expanse>(res.data)
 }
 
 export async function createExpanse(payload: {

@@ -7,11 +7,31 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.pagination import (
+    BudgetCursorPagination,
+    ExpanseCursorPagination,
+    IncomeCursorPagination,
+    RecurringCursorPagination,
+    apply_cursor_pagination,
+)
+
 from .models import Budget, Expanse, Income, Category,Recurring,UserCategoryPreference
 from .serializers import BudgetSerializer, CategorySerializer, ExpanseSerializer, IncomeSerializer, RecurringSerializer, UserCategoryPreferenceSerializer
 
 
+def _category_preferences_map(user):
+    """{category_id: UserCategoryPreference} for list serializers (avoids N+1)."""
+    return {
+        p.category_id: p
+        for p in UserCategoryPreference.objects.filter(user=user).select_related("category")
+    }
+
+
 class CategoryView(APIView):
+    """
+    List/create categories. Not paginated: full list is required for expense/income
+    dropdowns and filters across the SPA.
+    """
     serializer_class = CategorySerializer
     
     def get_permissions(self):
@@ -75,6 +95,10 @@ class CategoryDetailView(APIView):
 
 
 class UserCategoryPreferenceView(APIView):
+    """
+    Returns merged category catalog + preferences for the current user.
+    Not paginated: the UI expects one combined array for icon/color resolution.
+    """
     permission_classes = [IsAuthenticated]
     serializer_class = UserCategoryPreferenceSerializer
 
@@ -135,13 +159,27 @@ class ExpanseView(APIView):
     serializer_class = ExpanseSerializer
 
     def get(self, request):
-        expanses = Expanse.objects.filter(user=request.user).order_by("-date","-id")
-        serializer = self.serializer_class(expanses, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        queryset = (
+            Expanse.objects.filter(user=request.user)
+            .select_related("category")
+            .order_by("-date", "-created_at", "-id")
+        )
+        return apply_cursor_pagination(
+            request,
+            self,
+            queryset,
+            self.serializer_class,
+            ExpanseCursorPagination,
+            extra_serializer_context={"category_preferences": _category_preferences_map(request.user)},
+        )
 
     def post(self, request):
         serializer = self.serializer_class(
-            data=request.data, context={"request": request}
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
         )
         if serializer.is_valid():
             serializer.save()
@@ -159,7 +197,13 @@ class ExpanseDetailView(APIView):
             return Response(
                 {"detail": "Expanse not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        serializer = self.serializer_class(expanse_instance)
+        serializer = self.serializer_class(
+            expanse_instance,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
@@ -178,7 +222,12 @@ class ExpanseDetailView(APIView):
                 {"detail": "Expanse not found."}, status=status.HTTP_404_NOT_FOUND
             )
         serializer = self.serializer_class(
-            expanse_instance, data=request.data, context={"request": request}
+            expanse_instance,
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
         )
         if serializer.is_valid():
             serializer.save()
@@ -191,13 +240,27 @@ class IncomeView(APIView):
     serializer_class = IncomeSerializer
 
     def get(self, request):
-        incomes = Income.objects.filter(user=request.user).order_by("-date","-id")
-        serializer = self.serializer_class(incomes, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        queryset = (
+            Income.objects.filter(user=request.user)
+            .select_related("category")
+            .order_by("-date", "-created_at", "-id")
+        )
+        return apply_cursor_pagination(
+            request,
+            self,
+            queryset,
+            self.serializer_class,
+            IncomeCursorPagination,
+            extra_serializer_context={"category_preferences": _category_preferences_map(request.user)},
+        )
 
     def post(self, request):
         serializer = self.serializer_class(
-            data=request.data, context={"request": request}
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
         )
         if serializer.is_valid():
             serializer.save()
@@ -215,7 +278,13 @@ class IncomeDetailView(APIView):
             return Response(
                 {"detail": "Income not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        serializer = self.serializer_class(income_instance)
+        serializer = self.serializer_class(
+            income_instance,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
@@ -234,7 +303,12 @@ class IncomeDetailView(APIView):
                 {"detail": "Income not found."}, status=status.HTTP_404_NOT_FOUND
             )
         serializer = self.serializer_class(
-            income_instance, data=request.data, context={"request": request}
+            income_instance,
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
         )
         if serializer.is_valid():
             serializer.save()
@@ -246,13 +320,27 @@ class RecurringView(APIView):
     serializer_class = RecurringSerializer
 
     def get(self, request):
-        recurring_expanses = Recurring.recurringObjects.filter(user=request.user).select_related('category').order_by("-created_at","id")
-        serializer = self.serializer_class(recurring_expanses, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        queryset = (
+            Recurring.recurringObjects.filter(user=request.user)
+            .select_related("category", "user")
+            .order_by("-start_date", "-created_at", "-id")
+        )
+        return apply_cursor_pagination(
+            request,
+            self,
+            queryset,
+            self.serializer_class,
+            RecurringCursorPagination,
+            extra_serializer_context={"category_preferences": _category_preferences_map(request.user)},
+        )
 
     def post(self, request):    
         serializer = self.serializer_class(
-            data=request.data, context={"request": request}
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
         )
         if serializer.is_valid():
             serializer.save()
@@ -269,7 +357,13 @@ class RecurringDetailView(APIView):
             return Response(
                 {"detail": "Recurring entry not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        serializer = self.serializer_class(reccuring_instance)
+        serializer = self.serializer_class(
+            reccuring_instance,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
@@ -288,7 +382,13 @@ class RecurringDetailView(APIView):
                 {"detail": "Recurring entry not found."}, status=status.HTTP_404_NOT_FOUND
             )
         serializer = self.serializer_class(
-            reccuring_instance, data=request.data, context={"request": request}, partial=True
+            reccuring_instance,
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+            partial=True,
         )
         if serializer.is_valid():
             serializer.save()
@@ -301,12 +401,28 @@ class BudgetView(APIView):
     serializer_class = BudgetSerializer
 
     def get(self, request):
-        budgets = Budget.objects.filter(user=request.user).select_related("category").order_by("-id")
-        serializer = self.serializer_class(budgets, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        queryset = (
+            Budget.objects.filter(user=request.user)
+            .select_related("category")
+            .order_by("-created_at", "-id")
+        )
+        return apply_cursor_pagination(
+            request,
+            self,
+            queryset,
+            self.serializer_class,
+            BudgetCursorPagination,
+            extra_serializer_context={"category_preferences": _category_preferences_map(request.user)},
+        )
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer = self.serializer_class(
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -321,7 +437,13 @@ class BudgetDetailView(APIView):
         budget = Budget.objects.filter(user=request.user, id=pk).select_related("category").first()
         if not budget:
             return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(budget)
+        serializer = self.serializer_class(
+            budget,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
@@ -335,7 +457,14 @@ class BudgetDetailView(APIView):
         budget = Budget.objects.filter(user=request.user, id=pk).first()
         if not budget:
             return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(budget, data=request.data, context={"request": request})
+        serializer = self.serializer_class(
+            budget,
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -346,7 +475,13 @@ class BudgetDetailView(APIView):
         if not budget:
             return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.serializer_class(
-            budget, data=request.data, context={"request": request}, partial=True
+            budget,
+            data=request.data,
+            context={
+                "request": request,
+                "category_preferences": _category_preferences_map(request.user),
+            },
+            partial=True,
         )
         if serializer.is_valid():
             serializer.save()
@@ -355,6 +490,9 @@ class BudgetDetailView(APIView):
 
 
 class BudgetSummaryView(APIView):
+    """
+    Aggregated spend vs budget for a date window. Not paginated: one row per budget in range.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

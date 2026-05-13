@@ -1,9 +1,14 @@
 import { http } from '../../app/api/http'
+import { compactRequestParams, extractResults, type ExtractedPage } from '../../utils/pagination'
 import type { Recurring } from './types'
 
-export async function listRecurring() {
-  const res = await http.get<Recurring[]>('/v1/expanse/recurring/')
-  return res.data
+export async function listRecurring(
+  params?: { page_size?: number; cursor?: string | null },
+): Promise<ExtractedPage<Recurring>> {
+  const res = await http.get('/v1/expanse/recurring/', {
+    params: compactRequestParams(params ?? {}),
+  })
+  return extractResults<Recurring>(res.data)
 }
 
 export async function createRecurring(payload: {

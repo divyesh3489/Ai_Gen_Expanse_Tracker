@@ -76,6 +76,14 @@ class ExpanseSerializer(serializers.ModelSerializer):
         }
 
     def get_category_color(self, obj):
+        if obj.category_id is None:
+            return None
+        prefs = self.context.get("category_preferences")
+        if prefs is not None:
+            p = prefs.get(obj.category_id)
+            if p is not None:
+                return p.custom_color if p.custom_color else obj.category.default_color
+            return obj.category.default_color
         try:
             user = obj.user
             preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
@@ -112,6 +120,14 @@ class IncomeSerializer(serializers.ModelSerializer):
         }
 
     def get_category_color(self, obj):
+        if obj.category_id is None:
+            return None
+        prefs = self.context.get("category_preferences")
+        if prefs is not None:
+            p = prefs.get(obj.category_id)
+            if p is not None:
+                return p.custom_color if p.custom_color else obj.category.default_color
+            return obj.category.default_color
         try:
             user = obj.user
             preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
@@ -147,6 +163,14 @@ class BudgetSerializer(serializers.ModelSerializer):
         }
 
     def get_category_color(self, obj):
+        if obj.category_id is None:
+            return None
+        prefs = self.context.get("category_preferences")
+        if prefs is not None:
+            p = prefs.get(obj.category_id)
+            if p is not None:
+                return p.custom_color if p.custom_color else obj.category.default_color
+            return obj.category.default_color
         try:
             user = obj.user
             preference = UserCategoryPreference.objects.get(user=user, category=obj.category)
@@ -180,6 +204,14 @@ class RecurringSerializer(serializers.ModelSerializer):
         fields = ['id','user','user_name','category','category_name','category_color','amount','note','start_date','end_date','next_run_date','frequency','type']
 
     def get_category_color(self, obj):  
+        if obj.category_id is None:
+            return None
+        prefs = self.context.get("category_preferences")
+        if prefs is not None:
+            p = prefs.get(obj.category_id)
+            if p is not None:
+                return p.custom_color if p.custom_color else obj.category.default_color
+            return obj.category.default_color
         try:
             user = obj.user
             preference = UserCategoryPreference.objects.get(user=user, category=obj.category)

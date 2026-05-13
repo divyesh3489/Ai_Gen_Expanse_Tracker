@@ -1,4 +1,5 @@
 import { http } from '../../app/api/http'
+import { extractResults } from '../../utils/pagination'
 import type { Category } from './types'
 
 export type CategoryWritePayload = {
@@ -10,8 +11,9 @@ export type CategoryWritePayload = {
 
 export async function listCategories(params?: { type?: 'expense' | 'income' }) {
   const qs = params?.type ? `?type=${encodeURIComponent(params.type)}` : ''
-  const res = await http.get<Category[]>(`/v1/expanse/categories/${qs}`)
-  return res.data
+  const res = await http.get(`/v1/expanse/categories/${qs}`)
+  const { results } = extractResults<Category>(res.data)
+  return results
 }
 
 export async function createCategory(payload: CategoryWritePayload) {

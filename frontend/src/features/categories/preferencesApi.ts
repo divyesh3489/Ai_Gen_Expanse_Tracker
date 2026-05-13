@@ -1,4 +1,5 @@
 import { http } from '../../app/api/http'
+import { extractResults } from '../../utils/pagination'
 import type {
   UserCategoryPreferenceRow,
   UserCategoryPreferenceWritePayload,
@@ -6,8 +7,9 @@ import type {
 } from './types'
 
 export async function listUserCategoryPreferences() {
-  const res = await http.get<UserCategoryPreferenceRow[]>('/v1/expanse/user-category-preferences/')
-  return res.data
+  const res = await http.get('/v1/expanse/user-category-preferences/')
+  const { results } = extractResults<UserCategoryPreferenceRow>(res.data)
+  return results
 }
 
 export async function createUserCategoryPreference(payload: UserCategoryPreferenceWritePayload) {
