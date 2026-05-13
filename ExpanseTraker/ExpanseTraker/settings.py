@@ -121,9 +121,9 @@ REST_FRAMEWORK = {
         'user': '1000/day',
         'email_verification': '5/hour',
         'password_reset': '5/minute',
-    }
-    
-
+    },
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardCursorPagination",
+    "PAGE_SIZE": 20,
 }
 from datetime import timedelta
 

@@ -1,9 +1,14 @@
 import { http } from '../../app/api/http'
+import { compactRequestParams, extractResults, type ExtractedPage } from '../../utils/pagination'
 import type { Income } from './types'
 
-export async function listIncomes() {
-  const res = await http.get<Income[]>('/v1/expanse/incomes/')
-  return res.data
+export async function listIncomes(
+  params?: { page_size?: number; cursor?: string | null },
+): Promise<ExtractedPage<Income>> {
+  const res = await http.get('/v1/expanse/incomes/', {
+    params: compactRequestParams(params ?? {}),
+  })
+  return extractResults<Income>(res.data)
 }
 
 export async function createIncome(payload: {

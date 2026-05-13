@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Banknote,
   CalendarClock,
@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Palette,
   PiggyBank,
   Settings,
   Shapes,
@@ -15,9 +16,10 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../app/auth/AuthContext'
+import { useCategoryPreferencesMeta } from '../features/categories/useCategoryPreferences'
 import { Button } from '../components/ui/Button'
 
-const nav = [
+const baseNav = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/categories', label: 'Categories', icon: Shapes },
   { to: '/app/expenses', label: 'Expenses', icon: Wallet },
@@ -25,11 +27,18 @@ const nav = [
   { to: '/app/budgets', label: 'Budgets', icon: PiggyBank },
   { to: '/app/recurring', label: 'Recurring', icon: CalendarClock },
   { to: '/app/profile', label: 'Profile', icon: CircleUser },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
+  { to: '/app/settings', label: 'Settings', icon: Settings, end: true },
+  { to: '/app/settings/category-preferences', label: 'Category colors', icon: Palette },
 ]
 
 export function AppLayout() {
   const { user, logout } = useAuth()
+  useCategoryPreferencesMeta()
+
+  const nav = useMemo(
+    () => (user?.is_staff ? baseNav : baseNav.filter((item) => item.to !== '/app/categories')),
+    [user?.is_staff],
+  )
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
 
   const signedInLabel =
@@ -69,7 +78,7 @@ export function AppLayout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.end}
+                  end={Boolean(item.end)}
                   className={({ isActive }) =>
                     clsx(
                       'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
@@ -170,7 +179,7 @@ export function AppLayout() {
                     <NavLink
                       key={item.to}
                       to={item.to}
-                      end={item.end}
+                      end={Boolean(item.end)}
                       onClick={() => setIsMobileNavOpen(false)}
                       className={({ isActive }) =>
                         clsx(

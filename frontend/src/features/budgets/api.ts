@@ -1,9 +1,14 @@
 import { http } from '../../app/api/http'
+import { compactRequestParams, extractResults, type ExtractedPage } from '../../utils/pagination'
 import type { Budget } from './types'
 
-export async function listBudgets() {
-  const res = await http.get<Budget[]>('/v1/expanse/budgets/')
-  return res.data
+export async function listBudgets(
+  params?: { page_size?: number; cursor?: string | null },
+): Promise<ExtractedPage<Budget>> {
+  const res = await http.get('/v1/expanse/budgets/', {
+    params: compactRequestParams(params ?? {}),
+  })
+  return extractResults<Budget>(res.data)
 }
 
 export async function createBudget(payload: {

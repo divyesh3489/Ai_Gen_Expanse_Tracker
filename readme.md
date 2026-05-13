@@ -23,6 +23,15 @@
 
 ## models ##
 
+### baseModel ###
+Abstract base model inherited by all resource models. Provides audit trail tracking.
+
+**Fields:**
+- `created_at` (DateTimeField, auto_now_add=True) - Timestamp when record was created
+- `updated_at` (DateTimeField, auto_now=True) - Timestamp when record was last updated
+- `created_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who created the record
+- `updated_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who last updated the record
+
 ### User Model ###
 The User model extends Django's AbstractUser and uses email as the primary authentication field.
 
@@ -61,15 +70,28 @@ The VerificationToken model is used to store verification tokens for user email 
 - `created_at` (DateTimeField, auto_now_add=True) - The timestamp when the token was created
 
 ### Category Model ###
-The Category model is used to store categories for expenses and incomes.
+The Category model is used to store categories for expenses and incomes. Extends baseModel.
 
 **Fields:**
-- `name` (CharField, max_length=100) - The name of the category
-- `user` (ForeignKey, on_delete=CASCADE, related_name='categories') - The user associated with the category
-- `is_default` (BooleanField, default=False) - Whether the category is a default category
+- `name` (CharField, max_length=255, unique=True) - The name of the category
+- `icon` (CharField, max_length=255, default='FaWallet') - Font Awesome icon name for the category
+- `default_color` (CharField, max_length=7, default='#64748B') - Default hex color for the category
+- `type` (CharField, max_length=20, choices=['expense', 'income']) - Type of category (expense or income)
+- `created_at` (DateTimeField, auto_now_add=True) - Timestamp when category was created
+- `updated_at` (DateTimeField, auto_now=True) - Timestamp when category was last updated
+- `created_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who created the category
+- `updated_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who last updated the category
+
+### UserCategoryPreference Model ###
+The UserCategoryPreference model allows users to customize category appearance. Extends baseModel.
+
+**Fields:**
+- `user` (ForeignKey, on_delete=CASCADE, related_name='category_preferences') - The user
+- `category` (ForeignKey, on_delete=CASCADE, related_name='user_preferences') - The category
+- `custom_color` (CharField, max_length=7, blank=True, null=True) - Custom hex color the user set for this category
 
 ### Expanse Model ###
-The Expanse model is used to store expenses.
+The Expanse model is used to store expenses. Extends baseModel.
 
 **Fields:**
 - `user` (ForeignKey, on_delete=CASCADE, related_name='expanses') - The user associated with the expanse
@@ -77,9 +99,10 @@ The Expanse model is used to store expenses.
 - `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the expanse
 - `note` (TextField, blank=True, null=True) - The note of the expanse
 - `date` (DateField) - The date of the expanse
+- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
 
 ### Income Model ###
-The Income model is used to store incomes.
+The Income model is used to store incomes. Extends baseModel.
 
 **Fields:**
 - `user` (ForeignKey, on_delete=CASCADE, related_name='incomes') - The user associated with the income
@@ -87,9 +110,10 @@ The Income model is used to store incomes.
 - `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the income
 - `note` (TextField, blank=True, null=True) - The note of the income
 - `date` (DateField) - The date of the income
+- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
 
 ### Budget Model ###
-The Budget model is used to store budgets.
+The Budget model is used to store budgets. Extends baseModel.
 
 **Fields:**
 - `user` (ForeignKey, on_delete=CASCADE, related_name='budgets') - The user associated with the budget
@@ -97,9 +121,10 @@ The Budget model is used to store budgets.
 - `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the budget
 - `start_date` (DateField) - The start date of the budget
 - `end_date` (DateField) - The end date of the budget
+- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
 
 ### Recurring Model ###
-The Recurring model is used to store recurring expenses and incomes.
+The Recurring model is used to store recurring expenses and incomes. Extends baseModel. Uses custom manager `recurringObjects` to filter active recurrings only.
 
 **Fields:**
 - `user` (ForeignKey, on_delete=CASCADE, related_name='recurrings') - The user associated with the recurring
@@ -109,9 +134,16 @@ The Recurring model is used to store recurring expenses and incomes.
 - `start_date` (DateField) - The start date of the recurring
 - `end_date` (DateField, null=True, blank=True) - The end date of the recurring
 - `next_run_date` (DateField, null=True, blank=True) - The next run date of the recurring
-- `frequency` (CharField, max_length=20, choices=FREQUENCY_CHOICES) - The frequency of the recurring
-- `type` (CharField, max_length=20, choices=TYPE_CHOICES) - The type of the recurring
+- `frequency` (CharField, max_length=20, choices=['daily', 'weekly', 'monthly', 'yearly']) - The frequency of the recurring
+- `type` (CharField, max_length=20, choices=['expense', 'income']) - The type of the recurring
 - `is_active` (BooleanField, default=True) - Whether the recurring is active
+- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
+
+**Custom Manager:**
+- `recurringObjects` - Filters only active recurrings (is_active=True). Provides methods:
+  - `due_recurrings()` - Returns recurrings where next_run_date <= today
+  - `update_next_run_date(recurring)` - Updates next run date based on frequency
+  - `stop_recurrings(recurring)` - Deactivates a recurring
 
 
 ## Endpoints ##
@@ -130,46 +162,54 @@ The Recurring model is used to store recurring expenses and incomes.
 - `POST /api/v1/user/upload-profile-picture/` - Upload profile picture (auth required)
 
 ### Categories (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/categories/` - Get all categories
-- `POST /api/v1/expanse/categories/` - Create a new category
-- `GET /api/v1/expanse/categories/<int:pk>/` - Get a category by ID
-- `PATCH /api/v1/expanse/categories/<int:pk>/` - Update a category (cannot update default categories)
-- `DELETE /api/v1/expanse/categories/<int:pk>/` - Delete a category
+- `GET /api/v1/expanse/categories/` - Get all categories (auth required, supports optional `?type=expense` or `?type=income` filter)
+- `POST /api/v1/expanse/categories/` - Create a new category (admin only)
+- `GET /api/v1/expanse/categories/<int:pk>/` - Get a category by ID (auth required)
+- `PUT /api/v1/expanse/categories/<int:pk>/` - Update a category (admin only)
+- `DELETE /api/v1/expanse/categories/<int:pk>/` - Delete a category (admin only)
+
+### User Category Preferences (`/api/v1/expanse/`)
+- `GET /api/v1/expanse/user-category-preferences/` - Get all user's category preferences with defaults (auth required). Returns all expense categories with user's custom colors or default colors
+- `POST /api/v1/expanse/user-category-preferences/` - Create a user category preference (auth required)
+- `PUT /api/v1/expanse/user-category-preferences/<int:pk>/` - Update a user category preference (auth required, user's own only)
+- `DELETE /api/v1/expanse/user-category-preferences/<int:pk>/` - Delete a user category preference (auth required, user's own only)
 
 ### Expenses (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/expanses/` - Get all expanses
-- `POST /api/v1/expanse/expanses/` - Create a new expanse
-- `GET /api/v1/expanse/expanses/<int:pk>/` - Get an expanse by ID
-- `PUT /api/v1/expanse/expanses/<int:pk>/` - Update an expanse
-- `DELETE /api/v1/expanse/expanses/<int:pk>/` - Delete an expanse
+- `GET /api/v1/expanse/expanses/` - Get all user's expanses (auth required)
+- `POST /api/v1/expanse/expanses/` - Create a new expanse (auth required)
+- `GET /api/v1/expanse/expanses/<int:pk>/` - Get an expanse by ID (auth required, user's own only)
+- `PUT /api/v1/expanse/expanses/<int:pk>/` - Update an expanse (auth required, user's own only)
+- `DELETE /api/v1/expanse/expanses/<int:pk>/` - Delete an expanse (auth required, user's own only)
 
 ### Incomes (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/incomes/` - Get all incomes
-- `POST /api/v1/expanse/incomes/` - Create a new income
-- `GET /api/v1/expanse/incomes/<int:pk>/` - Get an income by ID
-- `PUT /api/v1/expanse/incomes/<int:pk>/` - Update an income
-- `DELETE /api/v1/expanse/incomes/<int:pk>/` - Delete an income
+- `GET /api/v1/expanse/incomes/` - Get all user's incomes (auth required)
+- `POST /api/v1/expanse/incomes/` - Create a new income (auth required)
+- `GET /api/v1/expanse/incomes/<int:pk>/` - Get an income by ID (auth required, user's own only)
+- `PUT /api/v1/expanse/incomes/<int:pk>/` - Update an income (auth required, user's own only)
+- `DELETE /api/v1/expanse/incomes/<int:pk>/` - Delete an income (auth required, user's own only)
 
 ### Recurring (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/recurring/` - Get all recurring entries
-- `POST /api/v1/expanse/recurring/` - Create a recurring entry
-- `GET /api/v1/expanse/recurring/<int:pk>/` - Get a recurring entry by ID
-- `PUT /api/v1/expanse/recurring/<int:pk>/` - Update a recurring entry
-- `DELETE /api/v1/expanse/recurring/<int:pk>/` - Delete a recurring entry
+- `GET /api/v1/expanse/recurring/` - Get all active recurring entries (auth required, user's own only)
+- `POST /api/v1/expanse/recurring/` - Create a recurring entry (auth required)
+- `GET /api/v1/expanse/recurring/<int:pk>/` - Get a recurring entry by ID (auth required, user's own only)
+- `PUT /api/v1/expanse/recurring/<int:pk>/` - Update a recurring entry (auth required, user's own only, supports partial updates)
+- `DELETE /api/v1/expanse/recurring/<int:pk>/` - Delete a recurring entry (auth required, user's own only)
 
 ### Budgets (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/budgets/` - Get all budgets
-- `POST /api/v1/expanse/budgets/` - Create a budget
-- `GET /api/v1/expanse/budgets/<int:pk>/` - Get a budget by ID
-- `PUT /api/v1/expanse/budgets/<int:pk>/` - Replace a budget
-- `PATCH /api/v1/expanse/budgets/<int:pk>/` - Update a budget
-- `DELETE /api/v1/expanse/budgets/<int:pk>/` - Delete a budget
-- `GET /api/v1/expanse/budgets/summary/?from=YYYY-MM-DD&to=YYYY-MM-DD` - Budget vs spent summary
+- `GET /api/v1/expanse/budgets/` - Get all user's budgets (auth required)
+- `POST /api/v1/expanse/budgets/` - Create a budget (auth required)
+- `GET /api/v1/expanse/budgets/<int:pk>/` - Get a budget by ID (auth required, user's own only)
+- `PUT /api/v1/expanse/budgets/<int:pk>/` - Replace a budget (auth required, user's own only)
+- `PATCH /api/v1/expanse/budgets/<int:pk>/` - Update a budget (auth required, user's own only, partial updates)
+- `DELETE /api/v1/expanse/budgets/<int:pk>/` - Delete a budget (auth required, user's own only)
+- `GET /api/v1/expanse/budgets/summary/?from=YYYY-MM-DD&to=YYYY-MM-DD` - Budget vs spent summary (auth required). Returns for each budget: budget_amount, spent_amount, remaining_amount, progress_percent, is_over_budget
 
 ## Frontend integration notes (JWT)
-- Send `Authorization: Bearer <access_token>` for all `/api/v1/expanse/*` endpoints and `/api/v1/user/me/`.
-- `login/` returns `access` + `refresh`. Use `token/refresh/` to get a new access token.
-- `logout/` blacklists the refresh token (requires SimpleJWT blacklist app enabled).
+- All authenticated endpoints require `Authorization: Bearer <access_token>` header
+- Resource endpoints (`/api/v1/expanse/*`) are user-specific and return only the current user's data
+- Category endpoints are global (all users see the same categories), but category creation/updates are admin-only
+- `login/` returns `access` + `refresh` tokens. Use `token/refresh/` with the refresh token to get a new access token when it expires
+- `logout/` blacklists the refresh token (requires SimpleJWT blacklist app enabled)
 
 ## Example payloads (minimal)
 
@@ -198,6 +238,12 @@ Request body:
 Request body:
 ```json
 { "category": 1, "amount": "5000.00", "start_date": "2026-05-01", "end_date": "2026-05-31" }
+```
+
+### Create/Update user category preference
+Request body:
+```json
+{ "category": 1, "custom_color": "#FF5733" }
 ```
 
 

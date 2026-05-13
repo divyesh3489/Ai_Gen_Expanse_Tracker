@@ -83,5 +83,5 @@ class PasswordResetToken(models.Model):
         User, on_delete=models.CASCADE, related_name="password_reset_tokens"
     )
     token = models.CharField(max_length=255)
-    expires_at = models.DateTimeField(default=timezone.now() + timedelta(minutes=15))
+    expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)

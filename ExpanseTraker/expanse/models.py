@@ -30,25 +30,35 @@ class baseModel(models.Model):
         abstract = True
 
 
-class category(baseModel):
-    name = models.CharField(max_length=255)
+class Category(baseModel):
+    name = models.CharField(max_length=255, unique=True, blank=False, null=False)
+    icon = models.CharField(max_length=255, blank=False, null=False,default="FaWallet")
+    default_color = models.CharField(max_length=7, default="#64748B")  # Accessible slate hex color for light/dark mode 
+    type = models.CharField(max_length=20, choices=[("expense", "Expense"), ("income", "Income")], default="expense")
+
+    def __str__(self):
+        return self.name
+
+class UserCategoryPreference(baseModel):
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name="categories",
+        related_name="category_preferences",
     )
-    is_default = models.BooleanField(default=False)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="user_preferences",
+    )
+    custom_color = models.CharField(max_length=7, blank=True, null=True)  # User can set a custom color for the category
 
-    class Meta:
-        unique_together = ('name', 'user')
+    def __str__(self):  
+        return f"{self.user.username} - {self.category.name} Preference"
     
-        
-
-    def __str__(self):
-        return self.name
-
 
 class Expanse(baseModel):
     user = models.ForeignKey(
@@ -59,7 +69,7 @@ class Expanse(baseModel):
         related_name="expanses",
     )
     category = models.ForeignKey(
-        category,
+        Category,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -79,7 +89,7 @@ class Income(baseModel):
         related_name="incomes",
     )
     category = models.ForeignKey(
-        category,
+        Category,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -99,7 +109,7 @@ class Budget(baseModel):
         related_name="budgets",
     )
     category = models.ForeignKey(
-        category,
+        Category,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -160,7 +170,7 @@ class Recurring(baseModel):
         related_name="recurrings",
     )
     category = models.ForeignKey(
-        category,
+        Category,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

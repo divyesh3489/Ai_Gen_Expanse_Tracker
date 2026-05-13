@@ -10,6 +10,8 @@ export type User = {
   is_verified?: boolean
   full_name?: string
   profile_picture?: string | null
+  /** Django admin API access; matches backend `IsAuthenticated` + category write permissions. */
+  is_staff?: boolean
 }
 
 export type AuthContextValue = {

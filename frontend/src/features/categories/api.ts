@@ -1,12 +1,22 @@
 import { http } from '../../app/api/http'
+import { extractResults } from '../../utils/pagination'
 import type { Category } from './types'
 
-export async function listCategories() {
-  const res = await http.get<Category[]>('/v1/expanse/categories/')
-  return res.data
+export type CategoryWritePayload = {
+  name: string
+  type: 'expense' | 'income'
+  icon: string
+  default_color: string
 }
 
-export async function createCategory(payload: { name: string }) {
+export async function listCategories(params?: { type?: 'expense' | 'income' }) {
+  const qs = params?.type ? `?type=${encodeURIComponent(params.type)}` : ''
+  const res = await http.get(`/v1/expanse/categories/${qs}`)
+  const { results } = extractResults<Category>(res.data)
+  return results
+}
+
+export async function createCategory(payload: CategoryWritePayload) {
   const res = await http.post<Category>('/v1/expanse/categories/', payload)
   return res.data
 }
@@ -15,8 +25,7 @@ export async function deleteCategory(id: number) {
   await http.delete(`/v1/expanse/categories/${id}/`)
 }
 
-export async function updateCategory(id: number, payload: { name?: string }) {
-  const res = await http.patch<Category>(`/v1/expanse/categories/${id}/`, payload)
+export async function updateCategory(id: number, payload: CategoryWritePayload) {
+  const res = await http.put<Category>(`/v1/expanse/categories/${id}/`, payload)
   return res.data
 }
-

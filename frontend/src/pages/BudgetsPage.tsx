@@ -1,13 +1,19 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { queryClient } from '../app/queryClient'
 import { Button } from '../components/ui/Button'
+import { RowActionButton } from '../components/ui/RowActionButton'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
+import { useCursorPagination } from '../hooks/useCursorPagination'
+import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel'
 import { listCategories } from '../features/categories/api'
-import { createBudget, deleteBudget, listBudgets, updateBudget } from '../features/budgets/api'
+import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
+import { CategoryDisplay } from '../features/categories/CategoryDisplay'
+import { createBudget, deleteBudget, updateBudget } from '../features/budgets/api'
+import type { Budget } from '../features/budgets/types'
 
 function monthStartISO() {
   const d = new Date()
@@ -21,6 +27,24 @@ function monthEndISO() {
   return end.toISOString().slice(0, 10)
 }
 
+function TableSkeleton({ cols }: { cols: number }) {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex gap-3 border-b border-slate-100 py-3 dark:border-slate-800/80">
+          {Array.from({ length: cols }).map((__, j) => (
+            <div
+              key={j}
+              className="h-4 flex-1 animate-pulse rounded bg-slate-200 dark:bg-slate-700"
+              style={{ maxWidth: j === cols - 1 ? '6rem' : undefined }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function BudgetsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [category, setCategory] = useState<number | ''>('')
@@ -28,8 +52,28 @@ export function BudgetsPage() {
   const [startDate, setStartDate] = useState(monthStartISO())
   const [endDate, setEndDate] = useState(monthEndISO())
 
-  const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
-  const budgets = useQuery({ queryKey: ['budgets'], queryFn: listBudgets })
+  const categories = useQuery({
+    queryKey: ['categories', 'expense'],
+    queryFn: () => listCategories({ type: 'expense' }),
+  })
+
+  const {
+    results: budgets,
+    loading,
+    initialLoading,
+    error,
+    errorMessage,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useCursorPagination<Budget>('/v1/expanse/budgets/', {}, { pageSize: 20 })
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useInfiniteScrollSentinel(
+    sentinelRef,
+    { hasMore, loading, initialLoading, loadMore },
+    budgets.length,
+  )
 
   const categoryNameById = useMemo(() => {
     const map = new Map<number, string>()
@@ -43,12 +87,17 @@ export function BudgetsPage() {
     return map
   }, [categories.data])
 
+  const invalidateDashboard = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+  }
+
   const create = useMutation({
     mutationFn: createBudget,
     onSuccess: async () => {
       setAmount('')
       setEditingId(null)
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      await refresh()
+      await invalidateDashboard()
     },
   })
 
@@ -66,14 +115,16 @@ export function BudgetsPage() {
       setAmount('')
       setStartDate(monthStartISO())
       setEndDate(monthEndISO())
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      await refresh()
+      await invalidateDashboard()
     },
   })
 
   const remove = useMutation({
     mutationFn: deleteBudget,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      await refresh()
+      await invalidateDashboard()
     },
   })
 
@@ -163,83 +214,115 @@ export function BudgetsPage() {
       </Card>
 
       <Card className="p-4">
-        {budgets.isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <Spinner /> Loading…
+        {initialLoading ? (
+          <TableSkeleton cols={4} />
+        ) : error && budgets.length === 0 ? (
+          <div className="space-y-3">
+            <div className="text-sm text-rose-700 dark:text-rose-200">{errorMessage ?? 'Failed to load budgets.'}</div>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void refresh()}>
+              Retry
+            </Button>
           </div>
-        ) : budgets.isError ? (
-          <div className="text-sm text-rose-700 dark:text-rose-200">Failed to load budgets.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="py-2">Category</th>
-                  <th className="py-2">Period</th>
-                  <th className="py-2 text-right">Amount</th>
-                  <th className="py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {(budgets.data ?? []).map((b) => (
-                  <tr key={b.id} className="align-top">
-                    <td className="py-3 font-medium text-slate-900 dark:text-slate-50">
-                      {b.name ??
-                        b.category_name ??
-                        (b.category ? categoryNameById.get(b.category) ?? `#${b.category}` : 'All')}
-                    </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-200">
-                      {b.start_date} → {b.end_date}
-                    </td>
-                    <td className="py-3 text-right font-semibold text-slate-900 dark:text-slate-50">{b.amount}</td>
-                    <td className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40"
-                          disabled={remove.isPending || update.isPending}
-                          onClick={() => {
-                            setEditingId(b.id)
-                            setAmount(String(b.amount ?? ''))
-                            setStartDate(String(b.start_date ?? monthStartISO()))
-                            setEndDate(String(b.end_date ?? monthEndISO()))
-                            const idFromNumber = typeof b.category === 'number' ? b.category : null
-                            const label = (b.name ?? b.category_name)?.toString().toLowerCase()
-                            const idFromLabel = label ? (categoryIdByName.get(label) ?? null) : null
-                            setCategory(idFromNumber ?? idFromLabel ?? '')
-                          }}
-                          aria-label="Edit budget"
-                          title="Edit"
-                        >
-                          <Pencil className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
-                          disabled={remove.isPending || update.isPending}
-                          onClick={() => remove.mutate(b.id)}
-                          aria-label="Delete budget"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!budgets.data?.length ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                      No budgets yet.
-                    </td>
+                    <th className="py-2">Category</th>
+                    <th className="py-2">Period</th>
+                    <th className="py-2 text-right">Amount</th>
+                    <th className="min-w-[6rem] py-2"></th>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {budgets.map((b) => (
+                    <tr
+                      key={b.id}
+                      className="group transition-colors hover:bg-slate-50/90 dark:hover:bg-slate-800/45"
+                    >
+                      <td className="py-3 align-middle font-medium text-slate-900 dark:text-slate-50">
+                        <CategoryDisplay
+                          variant="table"
+                          label={displayCategoryLabel(b, categoryNameById, 'All')}
+                          preferenceKey={preferenceKeyFromRow(b, categoryNameById)}
+                          listColor={b.category_color}
+                        />
+                      </td>
+                      <td className="py-3 align-middle text-slate-700 dark:text-slate-200">
+                        {b.start_date} → {b.end_date}
+                      </td>
+                      <td className="py-3 align-middle text-right font-semibold text-slate-900 dark:text-slate-50">
+                        {b.amount}
+                      </td>
+                      <td className="min-w-[6rem] py-3 text-right align-middle">
+                        <div className="flex items-center justify-end gap-2">
+                          <RowActionButton
+                            variant="edit"
+                            icon={Pencil}
+                            disabled={remove.isPending || update.isPending}
+                            onClick={() => {
+                              setEditingId(b.id)
+                              setAmount(String(b.amount ?? ''))
+                              setStartDate(String(b.start_date ?? monthStartISO()))
+                              setEndDate(String(b.end_date ?? monthEndISO()))
+                              const idFromNumber = typeof b.category === 'number' ? b.category : null
+                              const label = (b.name ?? b.category_name)?.toString().toLowerCase()
+                              const idFromLabel = label ? (categoryIdByName.get(label) ?? null) : null
+                              setCategory(idFromNumber ?? idFromLabel ?? '')
+                            }}
+                            aria-label="Edit budget"
+                          />
+                          <RowActionButton
+                            variant="delete"
+                            icon={Trash2}
+                            disabled={remove.isPending || update.isPending}
+                            onClick={() => remove.mutate(b.id)}
+                            aria-label="Delete budget"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!budgets.length && !error ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                        No budgets yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            {hasMore ? (
+              <div ref={sentinelRef} className="mt-4 h-3 w-full shrink-0" aria-hidden />
+            ) : null}
+
+            {!hasMore && budgets.length > 0 ? (
+              <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                All records loaded ({budgets.length} shown)
+              </p>
+            ) : null}
+
+            {error && budgets.length > 0 ? (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <div className="text-sm text-rose-700 dark:text-rose-200">{errorMessage ?? 'Could not load more.'}</div>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void refresh()}>
+                  Retry
+                </Button>
+              </div>
+            ) : null}
+
+            {!initialLoading && loading && budgets.length > 0 ? (
+              <div className="mt-4 flex justify-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <Spinner className="h-4 w-4 border-slate-300 border-t-slate-700 dark:border-slate-600 dark:border-t-slate-200" />
+                Loading more…
+              </div>
+            ) : null}
+          </>
         )}
       </Card>
     </div>
   )
 }
-
