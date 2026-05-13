@@ -22,9 +22,9 @@ class CategoryView(APIView):
     def get(self, request):
         type_filter = request.query_params.get("type")
         if type_filter in ["expense", "income"]:
-            categorys = Category.objects.filter(type=type_filter)
+            categorys = Category.objects.filter(type=type_filter).order_by("name")
         else:
-            categorys = Category.objects.all()
+            categorys = Category.objects.all().order_by("type", "name")
         serializer = self.serializer_class(categorys, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -135,7 +135,7 @@ class ExpanseView(APIView):
     serializer_class = ExpanseSerializer
 
     def get(self, request):
-        expanses = Expanse.objects.filter(user=request.user)
+        expanses = Expanse.objects.filter(user=request.user).order_by("-date","-id")
         serializer = self.serializer_class(expanses, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -191,7 +191,7 @@ class IncomeView(APIView):
     serializer_class = IncomeSerializer
 
     def get(self, request):
-        incomes = Income.objects.filter(user=request.user)
+        incomes = Income.objects.filter(user=request.user).order_by("-date","-id")
         serializer = self.serializer_class(incomes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -246,7 +246,7 @@ class RecurringView(APIView):
     serializer_class = RecurringSerializer
 
     def get(self, request):
-        recurring_expanses = Recurring.recurringObjects.filter(user=request.user).select_related('category')
+        recurring_expanses = Recurring.recurringObjects.filter(user=request.user).select_related('category').order_by("-created_at","id")
         serializer = self.serializer_class(recurring_expanses, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -301,7 +301,7 @@ class BudgetView(APIView):
     serializer_class = BudgetSerializer
 
     def get(self, request):
-        budgets = Budget.objects.filter(user=request.user).select_related("category")
+        budgets = Budget.objects.filter(user=request.user).select_related("category").order_by("-id")
         serializer = self.serializer_class(budgets, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

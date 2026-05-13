@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { queryClient } from '../app/queryClient'
 import { Button } from '../components/ui/Button'
+import { RowActionButton } from '../components/ui/RowActionButton'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
@@ -178,14 +179,17 @@ export function ExpensesPage() {
                   <th className="py-2">Category</th>
                   <th className="py-2">Note</th>
                   <th className="py-2 text-right">Amount</th>
-                  <th className="py-2"></th>
+                  <th className="min-w-[6rem] py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {(expanses.data ?? []).map((e) => (
-                  <tr key={e.id} className="align-top">
-                    <td className="py-3 text-slate-700 dark:text-slate-200">{e.date}</td>
-                    <td className="py-3 font-medium text-slate-900 dark:text-slate-50">
+                  <tr
+                    key={e.id}
+                    className="group transition-colors hover:bg-slate-50/90 dark:hover:bg-slate-800/45"
+                  >
+                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{e.date}</td>
+                    <td className="py-3 align-middle font-medium text-slate-900 dark:text-slate-50">
                       <CategoryDisplay
                         variant="table"
                         label={displayCategoryLabel(e, categoryNameById, '—')}
@@ -193,13 +197,15 @@ export function ExpensesPage() {
                         listColor={e.category_color}
                       />
                     </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-200">{e.note ?? '—'}</td>
-                    <td className="py-3 text-right font-semibold text-slate-900 dark:text-slate-50">{e.amount}</td>
-                    <td className="py-3 text-right">
+                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{e.note ?? '—'}</td>
+                    <td className="py-3 align-middle text-right font-semibold text-slate-900 dark:text-slate-50">
+                      {e.amount}
+                    </td>
+                    <td className="min-w-[6rem] py-3 text-right align-middle">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40"
+                        <RowActionButton
+                          variant="edit"
+                          icon={Pencil}
                           disabled={remove.isPending || update.isPending}
                           onClick={() => {
                             setEditingId(e.id)
@@ -212,20 +218,14 @@ export function ExpensesPage() {
                             setCategory(idFromNumber ?? idFromLabel ?? '')
                           }}
                           aria-label="Edit expense"
-                          title="Edit"
-                        >
-                          <Pencil className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                        />
+                        <RowActionButton
+                          variant="delete"
+                          icon={Trash2}
                           disabled={remove.isPending || update.isPending}
                           onClick={() => remove.mutate(e.id)}
                           aria-label="Delete expense"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
+                        />
                       </div>
                     </td>
                   </tr>

@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { queryClient } from '../app/queryClient'
 import { Button } from '../components/ui/Button'
+import { RowActionButton } from '../components/ui/RowActionButton'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
@@ -262,7 +263,10 @@ export function CategoriesPage() {
               const decoded = decodeIconFromApi(c.icon)
               const listColor = c.color ?? c.default_color ?? '#64748B'
               return (
-                <div key={c.id} className="flex items-center justify-between gap-4 py-3">
+                <div
+                  key={c.id}
+                  className="group flex items-center justify-between gap-4 rounded-xl py-3 pl-1 pr-1 transition-colors hover:bg-slate-50/90 dark:hover:bg-slate-800/45"
+                >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-900/60">
                       <RenderIcon iconName={decoded.name} iconPack={decoded.pack} color={listColor} size={24} />
@@ -272,27 +276,21 @@ export function CategoriesPage() {
                       <div className="text-xs capitalize text-slate-500 dark:text-slate-400">{c.type}</div>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40"
+                  <div className="flex min-w-[6rem] shrink-0 items-center justify-end gap-2">
+                    <RowActionButton
+                      variant="edit"
+                      icon={Pencil}
                       disabled={remove.isPending || update.isPending}
                       onClick={() => beginEdit(c)}
                       aria-label="Edit category"
-                      title="Edit"
-                    >
-                      <Pencil className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                    />
+                    <RowActionButton
+                      variant="delete"
+                      icon={Trash2}
                       disabled={remove.isPending || update.isPending}
                       onClick={() => setDeleteId(c.id)}
                       aria-label="Delete category"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
+                    />
                   </div>
                 </div>
               )

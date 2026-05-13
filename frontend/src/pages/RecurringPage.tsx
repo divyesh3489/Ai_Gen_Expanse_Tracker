@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { queryClient } from '../app/queryClient'
 import { Button } from '../components/ui/Button'
+import { RowActionButton } from '../components/ui/RowActionButton'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
@@ -254,14 +255,17 @@ export function RecurringPage() {
                   <th className="py-2">Start</th>
                   <th className="py-2">End</th>
                   <th className="py-2 text-right">Amount</th>
-                  <th className="py-2"></th>
+                  <th className="min-w-[6rem] py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {(recurring.data ?? []).map((r) => (
-                  <tr key={r.id} className="align-top">
-                    <td className="py-3 font-medium text-slate-900 dark:text-slate-50">{r.type}</td>
-                    <td className="py-3 text-slate-700 dark:text-slate-200">
+                  <tr
+                    key={r.id}
+                    className="group transition-colors hover:bg-slate-50/90 dark:hover:bg-slate-800/45"
+                  >
+                    <td className="py-3 align-middle font-medium text-slate-900 dark:text-slate-50">{r.type}</td>
+                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">
                       <CategoryDisplay
                         variant="table"
                         label={displayCategoryLabel(r, categoryNameById, '—')}
@@ -269,15 +273,17 @@ export function RecurringPage() {
                         listColor={r.category_color}
                       />
                     </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-200">{r.frequency}</td>
-                    <td className="py-3 text-slate-700 dark:text-slate-200">{r.start_date}</td>
-                    <td className="py-3 text-slate-700 dark:text-slate-200">{r.end_date ?? '—'}</td>
-                    <td className="py-3 text-right font-semibold text-slate-900 dark:text-slate-50">{r.amount}</td>
-                    <td className="py-3 text-right">
+                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.frequency}</td>
+                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.start_date}</td>
+                    <td className="py-3 align-middle text-slate-700 dark:text-slate-200">{r.end_date ?? '—'}</td>
+                    <td className="py-3 align-middle text-right font-semibold text-slate-900 dark:text-slate-50">
+                      {r.amount}
+                    </td>
+                    <td className="min-w-[6rem] py-3 text-right align-middle">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          className="h-11 w-11 p-0 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40"
+                        <RowActionButton
+                          variant="edit"
+                          icon={Pencil}
                           disabled={remove.isPending || update.isPending}
                           onClick={() => {
                             setEditingId(r.id)
@@ -293,20 +299,14 @@ export function RecurringPage() {
                             setCategory(idFromNumber ?? idFromLabel ?? '')
                           }}
                           aria-label="Edit recurring"
-                          title="Edit"
-                        >
-                          <Pencil className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="h-11 w-11 p-0 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                        />
+                        <RowActionButton
+                          variant="delete"
+                          icon={Trash2}
                           disabled={remove.isPending || update.isPending}
                           onClick={() => remove.mutate(r.id)}
                           aria-label="Delete recurring"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
+                        />
                       </div>
                     </td>
                   </tr>
