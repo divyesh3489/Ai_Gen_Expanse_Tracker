@@ -12,6 +12,7 @@ import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel'
 import { listCategories } from '../features/categories/api'
 import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
 import { CategoryDisplay } from '../features/categories/CategoryDisplay'
+import { invalidateAfterFinanceDataChange } from '../features/dashboard/invalidateDashboardQueries'
 import { createExpanse, deleteExpanse, updateExpanse } from '../features/expanses/api'
 import type { Expanse } from '../features/expanses/types'
 
@@ -84,7 +85,7 @@ export function ExpensesPage() {
   }, [categories.data])
 
   const invalidateDashboard = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['expanses'] })
+    await invalidateAfterFinanceDataChange(queryClient, 'expanses')
   }
 
   const create = useMutation({

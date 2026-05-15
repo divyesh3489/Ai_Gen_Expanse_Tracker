@@ -12,6 +12,7 @@ import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel'
 import { listCategories } from '../features/categories/api'
 import { displayCategoryLabel, preferenceKeyFromRow } from '../features/categories/categoryDisplayUtils'
 import { CategoryDisplay } from '../features/categories/CategoryDisplay'
+import { invalidateAfterFinanceDataChange } from '../features/dashboard/invalidateDashboardQueries'
 import { createIncome, deleteIncome, updateIncome } from '../features/incomes/api'
 import type { Income } from '../features/incomes/types'
 
@@ -81,7 +82,7 @@ export function IncomesPage() {
   }, [categories.data])
 
   const invalidateDashboard = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['incomes'] })
+    await invalidateAfterFinanceDataChange(queryClient, 'incomes')
   }
 
   const create = useMutation({
