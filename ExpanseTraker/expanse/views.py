@@ -1,5 +1,6 @@
 from django.db.models import Q,Sum
 from django.shortcuts import render
+from django.core.cache import cache
 from rest_framework import status
 
 # Create your views here.
@@ -22,6 +23,8 @@ from datetime import timedelta
 import calendar
 from django.utils import timezone
 from . import utils as expanse_utils
+from django.db.models.signals import post_save, post_delete
+
 
 def _category_preferences_map(user):
     """{category_id: UserCategoryPreference} for list serializers (avoids N+1)."""
@@ -429,98 +432,59 @@ class RecurringDetailView(APIView):
     
     
 class BudgetView(APIView):
+
     permission_classes = [IsAuthenticated]
-    serializer_class = BudgetSerializer
 
     def get(self, request):
-        queryset = (
-            Budget.objects.filter(user=request.user)
-            .select_related("category")
-            .order_by("-created_at", "-id")
-        )
-        return apply_cursor_pagination(
-            request,
-            self,
-            queryset,
-            self.serializer_class,
-            BudgetCursorPagination,
-            extra_serializer_context={"category_preferences": _category_preferences_map(request.user)},
-        )
-
-    def post(self, request):
-        serializer = self.serializer_class(
-            data=request.data,
-            context={
-                "request": request,
-                "category_preferences": _category_preferences_map(request.user),
-            },
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class BudgetDetailView(APIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = BudgetSerializer
-
-    def get(self, request, pk):
-        budget = Budget.objects.filter(user=request.user, id=pk).select_related("category").first()
-        if not budget:
-            return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(
-            budget,
-            context={
-                "request": request,
-                "category_preferences": _category_preferences_map(request.user),
-            },
-        )
+        user = request.user
+        budgets = Budget.objects.filter(user=user).select_related("category").order_by("category__name")
+        serializer = BudgetSerializer(budgets, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def delete(self, request, pk):
-        budget = Budget.objects.filter(user=request.user, id=pk).first()
-        if not budget:
-            return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
-        budget.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def put(self, request, pk):
-        budget = Budget.objects.filter(user=request.user, id=pk).first()
-        if not budget:
-            return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(
-            budget,
-            data=request.data,
-            context={
-                "request": request,
-                "category_preferences": _category_preferences_map(request.user),
-            },
-        )
+    def post(self, request):
+        serializer = BudgetSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class BudgetDetailView(APIView):
 
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        user = request.user
+        budget_instance = Budget.objects.filter(user=user, id=pk).select_related("category").first()
+        if not budget_instance:
+            return Response(
+                {"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = BudgetSerializer(budget_instance, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
     def patch(self, request, pk):
-        budget = Budget.objects.filter(user=request.user, id=pk).first()
-        if not budget:
-            return Response({"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(
-            budget,
-            data=request.data,
-            context={
-                "request": request,
-                "category_preferences": _category_preferences_map(request.user),
-            },
-            partial=True,
-        )
+        user = request.user
+        budget_instance = Budget.objects.filter(user=user, id=pk).select_related("category").first()
+        if not budget_instance:
+            return Response(
+                {"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = BudgetSerializer(budget_instance, data=request.data, context={"request": request}, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+    
+    def delete(self, request, pk):
+        user = request.user
+        budget_instance = Budget.objects.filter(user=user, id=pk).first()
+        if not budget_instance:
+            return Response(
+                {"detail": "Budget not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        budget_instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
 class BudgetSummaryView(APIView):
     """
     Aggregated spend vs budget for a date window. Not paginated: one row per budget in range.
@@ -528,47 +492,36 @@ class BudgetSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        start = request.query_params.get("from")
-        end = request.query_params.get("to")
-        if not start or not end:
-            return Response(
-                {"detail": "Query params 'from' and 'to' are required (YYYY-MM-DD)."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        budget_catch_key = expanse_utils.get_budget_catch_key(request.user.id, "summary", "overall")
+        if cache.get(budget_catch_key):
+            print("Cache hit for budget summary")
+            return Response(cache.get(budget_catch_key), status=status.HTTP_200_OK)
+        budget_qs = Budget.objects.filter(user=request.user).select_related("category").order_by("category__name")
 
-        budgets = (
-            Budget.objects.filter(user=request.user, start_date__lte=end, end_date__gte=start)
-            .select_related("category")
-            .order_by("id")
-        )
+        response_data = []
 
-        results = []
-        for b in budgets:
-            expanse_qs = Expanse.objects.filter(user=request.user, date__gte=start, date__lte=end)
-            if b.category_id is not None:
-                expanse_qs = expanse_qs.filter(category_id=b.category_id)
-
-            spent = expanse_qs.aggregate(total=Sum("amount"))["total"] or 0
-            remaining = b.amount - spent
-            progress = (spent / b.amount * 100) if b.amount and b.amount != 0 else None
-
-            results.append(
+        for budget in budget_qs:
+            start_date, end_date = expanse_utils.get_start_and_end_date_according_to_frequency(budget.budget_type)
+            if budget.category is None:
+                total_spend = Expanse.objects.filter(user=request.user, date__gte=start_date, date__lte=end_date).aggregate(total=Sum("amount"))["total"] or 0
+            else:
+                total_spend = Expanse.objects.filter(user=request.user, category=budget.category, date__gte=start_date, date__lte=end_date).aggregate(total=Sum("amount"))["total"] or 0
+            percent_used = (total_spend / budget.amount) * 100 if budget.amount and budget.amount != 0 else 0
+            remaining_amount = budget.amount - total_spend
+            response_data.append(
                 {
-                    "id": b.id,
-                    "category": b.category_id,
-                    "category_name": b.category.name if b.category_id else None,
-                    "budget_amount": b.amount,
-                    "period_start": b.start_date,
-                    "period_end": b.end_date,
-                    "spent_amount": spent,
-                    "remaining_amount": remaining,
-                    "progress_percent": progress,
-                    "is_over_budget": remaining < 0,
+                    "id": budget.id,
+                    "category": budget.category.name if budget.category else "Overall",
+                    "category_color": budget.category.default_color if budget.category else "#64748B",
+                    "amount": float(budget.amount),
+                    "total_spend": float(total_spend),
+                    "remaining_amount": round(remaining_amount, 2),
+                    "budget_type": budget.budget_type,
+                    "percent_used": round(percent_used, 2),
                 }
             )
-
-        return Response(results, status=status.HTTP_200_OK)
-
+        cache.set(budget_catch_key, response_data, timeout=300)  # Cache for 5 minutes
+        return Response(response_data, status=status.HTTP_200_OK)
 
 class DashboardSummaryView(APIView):
     """

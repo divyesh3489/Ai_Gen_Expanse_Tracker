@@ -153,18 +153,33 @@ class IncomeSerializer(serializers.ModelSerializer):
 
 
 class BudgetSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source="category.name", read_only=True)
+    category_name = serializers.SerializerMethodField()
     category_color = serializers.SerializerMethodField()
+    category_icon = serializers.SerializerMethodField()
+
     class Meta:
         model = Budget
-        fields = ["id", "category", "category_name", "category_color", "amount", "start_date", "end_date"]
-        extra_kwargs = {
-            "category": {"required": False, "allow_null": True, "write_only": True}
+        fields = ["id", "category", "category_name", "category_color", "category_icon", "amount", "budget_type"]
+        extra_kwargs = {    
+            "category": {"required": False, "allow_null": True},
+            "budget_type": {"required": True, "allow_blank": False},
+            "category_icon": {"read_only": True},
+            "category_color": {"read_only": True},
         }
+    def validate(self, attrs):
+        category = attrs.get("category")
+        user = self.context["request"].user
+        budget_type = attrs.get("budget_type")
+        if Budget.objects.filter(user=user, category=category, budget_type=budget_type).exists():
+            raise ValidationError("A budget for this category and type already exists.")
+        return super().validate(attrs)
+    def get_category_name(self, obj):
+        return obj.category.name if obj.category else "overall"
 
     def get_category_color(self, obj):
         if obj.category_id is None:
-            return None
+            return "#64748B"  
+        
         prefs = self.context.get("category_preferences")
         if prefs is not None:
             p = prefs.get(obj.category_id)
@@ -177,22 +192,28 @@ class BudgetSerializer(serializers.ModelSerializer):
             return preference.custom_color if preference.custom_color else obj.category.default_color
         except UserCategoryPreference.DoesNotExist:
             return obj.category.default_color
+        
+    def get_category_icon(self, obj):
+        if obj.category_id is None:
+            return "FaWallet"  
+        return obj.category.icon
     
     def create(self, validated_data):
+        validated_data.pop("user", None)
         user = self.context["request"].user
         validated_data["created_by"] = user
         validated_data["updated_by"] = user
         return Budget.objects.create(user=user, **validated_data)
-
+    
     def update(self, instance, validated_data):
         user = self.context["request"].user
         instance.category = validated_data.get("category", instance.category)
         instance.amount = validated_data.get("amount", instance.amount)
-        instance.start_date = validated_data.get("start_date", instance.start_date)
-        instance.end_date = validated_data.get("end_date", instance.end_date)
+        instance.budget_type = validated_data.get("budget_type", instance.budget_type)
         instance.updated_by = user
         instance.save()
         return instance
+   
 
 class RecurringSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.email", read_only=True)

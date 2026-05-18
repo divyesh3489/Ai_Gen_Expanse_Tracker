@@ -35,3 +35,35 @@ def get_start_date_according_to_frequency(frequency):
     elif frequency == "yearly":
         return find_year_start_date()
     return timezone.now().date()
+
+
+def get_start_and_end_date_according_to_frequency(frequency):
+    today = timezone.now().date()
+    if frequency == "weekly":
+        start_date = find_week_monday_date()
+        end_date = start_date + timedelta(days=6)
+    elif frequency == "monthly":
+        start_date = find_month_start_date()
+        end_date = timezone.datetime(today.year, today.month, calendar.monthrange(today.year, today.month)[1]).date()
+    elif frequency == "yearly":
+        start_date = find_year_start_date()
+        end_date = timezone.datetime(today.year, 12, 31).date()
+    else:
+        start_date = end_date = today
+    return start_date, end_date
+
+def get_budget_catch_key(user_id,category_id, budget_type):
+    return f"{user_id}_{category_id}_{budget_type}"
+
+
+def get_budget_data_from_cache(cache, user_id, category_id, budget_type):
+    key = get_budget_catch_key(user_id, category_id, budget_type)
+    return cache.get(key)
+
+def set_budget_data_in_cache(cache, user_id, category_id, budget_type, data, timeout=3600):
+    key = get_budget_catch_key(user_id, category_id, budget_type)
+    cache.set(key, data, timeout)
+
+def clear_budget_cache(cache, user_id, category_id, budget_type):
+    key = get_budget_catch_key(user_id, category_id, budget_type)
+    cache.delete(key)

@@ -101,11 +101,14 @@ class Income(baseModel):
 
 
 class Budget(baseModel):
+    class BudgetType(models.TextChoices):
+        WEEKLY = "weekly", "Weekly"
+        MONTHLY = "monthly", "Monthly"
+        YEARLY = "yearly", "Yearly"
+
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
         related_name="budgets",
     )
     category = models.ForeignKey(
@@ -116,8 +119,10 @@ class Budget(baseModel):
         related_name="budgets",
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    start_date = models.DateField()
-    end_date = models.DateField()
+    budget_type = models.CharField(max_length=20, choices=BudgetType.choices,default="weekly")
+
+    class Meta:
+        unique_together = ("user", "category", "budget_type")   
 
 
 class RrcurringManager(models.Manager):
