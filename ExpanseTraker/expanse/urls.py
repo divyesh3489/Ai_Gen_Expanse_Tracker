@@ -22,5 +22,10 @@ urlpatterns = [
     path("budgets/", views.BudgetView.as_view(), name="budgets"),
     path("budgets/summary/", views.BudgetSummaryView.as_view(), name="budget_summary"),
     path("budgets/<int:pk>/", views.BudgetDetailView.as_view(), name="budget_detail"),
+    path("reports/summary/", views.DashboardSummaryView.as_view(), name="report_summary"),
+    path("reports/dashboard/finance-trend/", views.FinanceTrendView.as_view(), name="report_finance_trend"),
+    path("reports/dashboard/years/", views.GetYearsViews.as_view(), name="report_years"),
+    path("reports/dashboard/category-breakdown/", views.CategoryBreakdownView.as_view(), name="report_category_breakdown"),
+    path("reports/dashboard/recent-transactions/", views.GetRecentTransactionsView.as_view(), name="report_recent_transactions"),
 ]
     

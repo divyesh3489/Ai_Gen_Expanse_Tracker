@@ -57,7 +57,7 @@ export function AppLayout() {
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
-      <div className="mx-auto flex min-h-dvh max-w-7xl">
+      <div className="flex min-h-dvh w-full">
         <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950">
           <div className="px-5 py-5">
             <Link to="/app" className="flex items-center gap-2">
@@ -221,7 +221,7 @@ export function AppLayout() {
             </div>
           </div>
 
-          <div className="mx-auto max-w-5xl px-4 pb-6 pt-20 lg:py-6">
+          <div className="w-full min-w-0 px-4 pb-6 pt-20 lg:px-6 lg:py-6">
             <Outlet />
           </div>
         </main>

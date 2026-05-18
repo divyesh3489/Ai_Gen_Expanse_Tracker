@@ -1,226 +1,166 @@
-# Expanse Tracker #
+# Expense Tracker (ExpanseTraker)
 
-## Architecture #
-- Django Rest Framework
-- Django Simple JWT
-- Celery
-- Redis
-- PostgreSQL
+Full-stack personal finance app: **Django REST** API with **JWT** auth, **Celery** background jobs, and a **React + Vite + TypeScript** SPA (Tailwind, TanStack Query). The API uses the name “expanse” in URLs and models for historical consistency with the repo.
 
+## What’s in the repo
 
-## Features ##
-- User Registration
-- User Login
-- User Logout
-- User Profiler
-- User Verification
-- Category Management
-- Expanse Management
-- Income Management
-- Budget Management
-- LLM based Suggestions
-- Chatbot for Expanse and Income Management
+| Area | Path | Notes |
+|------|------|--------|
+| Backend | `ExpanseTraker/` | Django 5.2 project `ExpanseTraker`, apps `user`, `expanse`, `core` |
+| Frontend | `frontend/` | React 19, Vite 8, proxies `/api` → `http://localhost:8000` in dev |
+| Dev containers | `docker-compose.yml` | API, SPA, Postgres, Redis, Celery worker + beat |
+| Production | `docker-compose.prod.yml`, `nginx/` | Nginx builds the SPA, serves static UI, proxies `/api` and `/admin` to Gunicorn; Certbot for TLS |
 
-## models ##
+## Architecture
 
-### baseModel ###
-Abstract base model inherited by all resource models. Provides audit trail tracking.
+**Backend**
 
-**Fields:**
-- `created_at` (DateTimeField, auto_now_add=True) - Timestamp when record was created
-- `updated_at` (DateTimeField, auto_now=True) - Timestamp when record was last updated
-- `created_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who created the record
-- `updated_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who last updated the record
+- Django REST Framework, Simple JWT (access/refresh + blacklist logout)
+- PostgreSQL when `production=true` in environment; SQLite otherwise
+- Redis (Celery broker/result, django-redis cache)
+- django-celery-beat (scheduled tasks, e.g. recurring expense/income generation)
+- django-storages + S3 for profile pictures and media
+- django-cors-headers for allowed browser origins
 
-### User Model ###
-The User model extends Django's AbstractUser and uses email as the primary authentication field.
+**Frontend**
 
-**Fields:**
-- `email` (EmailField, unique=True, required) - Primary authentication field
-- `first_name` (CharField, max_length=30, blank=True) - User's first name
-- `last_name` (CharField, max_length=30, blank=True) - User's last name
-- `gender` (CharField, max_length=10, blank=True) - Gender choice: 'male' or 'female'
-- `dob` (DateField, null=True, blank=True) - Date of birth
-- `password` (CharField) - Hashed password (inherited from AbstractUser)
-- `is_active` (BooleanField, default=True) - Whether the user account is active
-- `is_staff` (BooleanField, default=False) - Whether the user can access admin site
-- `is_superuser` (BooleanField, default=False) - Whether the user has all permissions
-- `is_verified` (BooleanField, default=False) - Whether the user's email is verified
-- `date_joined` (DateTimeField) - Account creation timestamp (inherited from AbstractUser)
-- `last_login` (DateTimeField, null=True) - Last login timestamp (inherited from AbstractUser)
+- React Router 7, axios with JWT refresh retry, light/dark theme
+- Routes: auth (`/login`, `/register`, `/forgot-password`, `/reset-password`), app shell under `/app` (dashboard, expenses, incomes, budgets, recurring, profile, settings, category preferences; `/app/categories` admin-only)
 
-**Properties:**
-- `full_name` - Returns concatenated first_name and last_name
+**Celery tasks (high level)**
 
-**Managers:**
-- `objects` - Default UserManager with create_user, create_superuser, and delete_user methods
-- `active_objects` - ActiveUserManager for filtering active users only
+- Email: verification after register, password reset links (token expires in 15 minutes), cleanup of expired reset tokens
+- Recurring: materialize due recurring rows into `Expanse` / `Income` and advance `next_run_date`
 
-**Authentication:**
-- `USERNAME_FIELD` = 'email'
-- `REQUIRED_FIELDS` = []
-- `username` = None (username field is disabled)
+## Features
 
-### VerificationToken Model ###
-The VerificationToken model is used to store verification tokens for user email verification.
+- Register / login / logout (JWT); email verification before login
+- Resend verification email; forgot password + reset password (token in email → SPA)
+- Profile: read/update `me/`, upload profile picture (S3)
+- Categories (global list; create/update/delete **admin only**); per-user category color preferences
+- Expenses (“expanses”), incomes, budgets with date range and summary vs spend (`from` / `to`)
+- Recurring expense/income with frequency (daily / weekly / monthly / yearly) and Celery-backed processing
 
-**Fields:**
-- `user` (ForeignKey, on_delete=CASCADE, related_name='verification_tokens') - The user associated with the verification token
-- `token` (CharField, max_length=255) - The verification token
-- `created_at` (DateTimeField, auto_now_add=True) - The timestamp when the token was created
+## Quick start (Docker, dev)
 
-### Category Model ###
-The Category model is used to store categories for expenses and incomes. Extends baseModel.
+From the repository root:
 
-**Fields:**
-- `name` (CharField, max_length=255, unique=True) - The name of the category
-- `icon` (CharField, max_length=255, default='FaWallet') - Font Awesome icon name for the category
-- `default_color` (CharField, max_length=7, default='#64748B') - Default hex color for the category
-- `type` (CharField, max_length=20, choices=['expense', 'income']) - Type of category (expense or income)
-- `created_at` (DateTimeField, auto_now_add=True) - Timestamp when category was created
-- `updated_at` (DateTimeField, auto_now=True) - Timestamp when category was last updated
-- `created_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who created the category
-- `updated_by` (ForeignKey, User, on_delete=SET_NULL, null=True) - User who last updated the category
+```bash
+docker compose up --build
+```
 
-### UserCategoryPreference Model ###
-The UserCategoryPreference model allows users to customize category appearance. Extends baseModel.
+- API: `http://localhost:8000` (e.g. `http://localhost:8000/api/v1/…`)
+- SPA: `http://localhost:3000` (container maps `3000:80`)
 
-**Fields:**
-- `user` (ForeignKey, on_delete=CASCADE, related_name='category_preferences') - The user
-- `category` (ForeignKey, on_delete=CASCADE, related_name='user_preferences') - The category
-- `custom_color` (CharField, max_length=7, blank=True, null=True) - Custom hex color the user set for this category
+Ensure `.env` matches your compose setup (see **Environment** below). Migrations run on the `web` container startup.
 
-### Expanse Model ###
-The Expanse model is used to store expenses. Extends baseModel.
+**Production-style stack** (Nginx + Gunicorn + TLS hooks): see `docker-compose.prod.yml` and `nginx/Dockerfile` (multi-stage: build `frontend/`, copy `dist` into Nginx).
 
-**Fields:**
-- `user` (ForeignKey, on_delete=CASCADE, related_name='expanses') - The user associated with the expanse
-- `category` (ForeignKey, on_delete=SET_NULL, null=True, blank=True, related_name='expanses') - The category associated with the expanse
-- `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the expanse
-- `note` (TextField, blank=True, null=True) - The note of the expanse
-- `date` (DateField) - The date of the expanse
-- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
+## Local development without Docker (optional)
 
-### Income Model ###
-The Income model is used to store incomes. Extends baseModel.
+1. Python 3.10+, Node 20+, Redis (for Celery if you run workers).
+2. Backend: from the repo root, create a venv and `pip install -r requirements.txt`, then `cd ExpanseTraker`, `python manage.py migrate`, `python manage.py runserver`.
+3. Frontend: `cd frontend`, `npm ci`, `npm run dev` (Vite dev server proxies `/api` to port 8000).
+4. Run Celery worker (and beat if you test schedules): `celery -A ExpanseTraker worker -l info` and `celery -A ExpanseTraker beat -l info` from `ExpanseTraker/`.
 
-**Fields:**
-- `user` (ForeignKey, on_delete=CASCADE, related_name='incomes') - The user associated with the income
-- `category` (ForeignKey, on_delete=SET_NULL, null=True, blank=True, related_name='incomes') - The category associated with the income
-- `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the income
-- `note` (TextField, blank=True, null=True) - The note of the income
-- `date` (DateField) - The date of the income
-- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
+Useful management commands (from `ExpanseTraker/`): `wait_for_db`, `categories_seed_data`, `seed_dummy_data`.
 
-### Budget Model ###
-The Budget model is used to store budgets. Extends baseModel.
+## Environment
 
-**Fields:**
-- `user` (ForeignKey, on_delete=CASCADE, related_name='budgets') - The user associated with the budget
-- `category` (ForeignKey, on_delete=SET_NULL, null=True, blank=True, related_name='budgets') - The category associated with the budget
-- `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the budget
-- `start_date` (DateField) - The start date of the budget
-- `end_date` (DateField) - The end date of the budget
-- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
+Typical variables (not exhaustive): `SECRET_KEY`, `DEBUG`, `production` (use Postgres when true: `database`, `user_name`, `password`, `host`, `port`), `REDIS_URL`, `REDIS_CACHE_URL`, `EMAIL_*`, `DOMAIN` (backend base for verification links), `FRONTEND_URL` (for password reset links), `AWS_*` for S3. Docker Postgres defaults are in `docker-compose.yml`.
 
-### Recurring Model ###
-The Recurring model is used to store recurring expenses and incomes. Extends baseModel. Uses custom manager `recurringObjects` to filter active recurrings only.
+## Models
 
-**Fields:**
-- `user` (ForeignKey, on_delete=CASCADE, related_name='recurrings') - The user associated with the recurring
-- `category` (ForeignKey, on_delete=SET_NULL, null=True, blank=True, related_name='recurrings') - The category associated with the recurring
-- `amount` (DecimalField, max_digits=10, decimal_places=2) - The amount of the recurring
-- `note` (TextField, blank=True, null=True) - The note of the recurring
-- `start_date` (DateField) - The start date of the recurring
-- `end_date` (DateField, null=True, blank=True) - The end date of the recurring
-- `next_run_date` (DateField, null=True, blank=True) - The next run date of the recurring
-- `frequency` (CharField, max_length=20, choices=['daily', 'weekly', 'monthly', 'yearly']) - The frequency of the recurring
-- `type` (CharField, max_length=20, choices=['expense', 'income']) - The type of the recurring
-- `is_active` (BooleanField, default=True) - Whether the recurring is active
-- `created_at`, `updated_at`, `created_by`, `updated_by` (inherited from baseModel)
+### `baseModel` (abstract)
 
-**Custom Manager:**
-- `recurringObjects` - Filters only active recurrings (is_active=True). Provides methods:
-  - `due_recurrings()` - Returns recurrings where next_run_date <= today
-  - `update_next_run_date(recurring)` - Updates next run date based on frequency
-  - `stop_recurrings(recurring)` - Deactivates a recurring
+Shared audit fields: `created_at`, `updated_at`, `created_by`, `updated_by` (FK to `User`, `SET_NULL`).
 
+### `User`
 
-## Endpoints ##
-- **Auth base**: `/api/v1/user/`
-- **Resource base**: `/api/v1/expanse/`
+Extends `AbstractUser` with `username` disabled; **`USERNAME_FIELD` = `email`**. Notable fields: `email` (unique), `first_name`, `last_name`, `gender`, `dob`, `is_verified`, `profile_picture` (URL, default S3 asset). Managers: `objects`, `active_objects`.
 
-### User/Auth (`/api/v1/user/`)
-- `POST /api/v1/user/register/` - Register a new user (triggers verification email)
-- `POST /api/v1/user/login/` - Login a user (returns JWT access/refresh; requires verified user)
-- `POST /api/v1/user/token/refresh/` - Refresh access token
-- `POST /api/v1/user/logout/` - Logout (blacklist refresh token)
-- `GET  /api/v1/user/me/` - Get user profile (auth required)
-- `PATCH /api/v1/user/me/` - Update user profile (auth required)
-- `GET  /api/v1/user/verify/<str:token>/` - Verify user email
-- `POST /api/v1/user/resend-verification/` - Resend verification email
-- `POST /api/v1/user/upload-profile-picture/` - Upload profile picture (auth required)
+### `VerificationToken`
 
-### Categories (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/categories/` - Get all categories (auth required, supports optional `?type=expense` or `?type=income` filter)
-- `POST /api/v1/expanse/categories/` - Create a new category (admin only)
-- `GET /api/v1/expanse/categories/<int:pk>/` - Get a category by ID (auth required)
-- `PUT /api/v1/expanse/categories/<int:pk>/` - Update a category (admin only)
-- `DELETE /api/v1/expanse/categories/<int:pk>/` - Delete a category (admin only)
+`user`, `token`, `created_at` — email verification.
 
-### User Category Preferences (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/user-category-preferences/` - Get all user's category preferences with defaults (auth required). Returns all expense categories with user's custom colors or default colors
-- `POST /api/v1/expanse/user-category-preferences/` - Create a user category preference (auth required)
-- `PUT /api/v1/expanse/user-category-preferences/<int:pk>/` - Update a user category preference (auth required, user's own only)
-- `DELETE /api/v1/expanse/user-category-preferences/<int:pk>/` - Delete a user category preference (auth required, user's own only)
+### `PasswordResetToken`
 
-### Expenses (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/expanses/` - Get all user's expanses (auth required)
-- `POST /api/v1/expanse/expanses/` - Create a new expanse (auth required)
-- `GET /api/v1/expanse/expanses/<int:pk>/` - Get an expanse by ID (auth required, user's own only)
-- `PUT /api/v1/expanse/expanses/<int:pk>/` - Update an expanse (auth required, user's own only)
-- `DELETE /api/v1/expanse/expanses/<int:pk>/` - Delete an expanse (auth required, user's own only)
+`user`, `token`, `expires_at`, `created_at` — short-lived reset tokens consumed by the reset-password API.
 
-### Incomes (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/incomes/` - Get all user's incomes (auth required)
-- `POST /api/v1/expanse/incomes/` - Create a new income (auth required)
-- `GET /api/v1/expanse/incomes/<int:pk>/` - Get an income by ID (auth required, user's own only)
-- `PUT /api/v1/expanse/incomes/<int:pk>/` - Update an income (auth required, user's own only)
-- `DELETE /api/v1/expanse/incomes/<int:pk>/` - Delete an income (auth required, user's own only)
+### `Category` (extends `baseModel`)
 
-### Recurring (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/recurring/` - Get all active recurring entries (auth required, user's own only)
-- `POST /api/v1/expanse/recurring/` - Create a recurring entry (auth required)
-- `GET /api/v1/expanse/recurring/<int:pk>/` - Get a recurring entry by ID (auth required, user's own only)
-- `PUT /api/v1/expanse/recurring/<int:pk>/` - Update a recurring entry (auth required, user's own only, supports partial updates)
-- `DELETE /api/v1/expanse/recurring/<int:pk>/` - Delete a recurring entry (auth required, user's own only)
+`name` (unique), `icon`, `default_color`, `type` (`expense` | `income`).
 
-### Budgets (`/api/v1/expanse/`)
-- `GET /api/v1/expanse/budgets/` - Get all user's budgets (auth required)
-- `POST /api/v1/expanse/budgets/` - Create a budget (auth required)
-- `GET /api/v1/expanse/budgets/<int:pk>/` - Get a budget by ID (auth required, user's own only)
-- `PUT /api/v1/expanse/budgets/<int:pk>/` - Replace a budget (auth required, user's own only)
-- `PATCH /api/v1/expanse/budgets/<int:pk>/` - Update a budget (auth required, user's own only, partial updates)
-- `DELETE /api/v1/expanse/budgets/<int:pk>/` - Delete a budget (auth required, user's own only)
-- `GET /api/v1/expanse/budgets/summary/?from=YYYY-MM-DD&to=YYYY-MM-DD` - Budget vs spent summary (auth required). Returns for each budget: budget_amount, spent_amount, remaining_amount, progress_percent, is_over_budget
+### `UserCategoryPreference` (extends `baseModel`)
 
-## Frontend integration notes (JWT)
-- All authenticated endpoints require `Authorization: Bearer <access_token>` header
-- Resource endpoints (`/api/v1/expanse/*`) are user-specific and return only the current user's data
-- Category endpoints are global (all users see the same categories), but category creation/updates are admin-only
-- `login/` returns `access` + `refresh` tokens. Use `token/refresh/` with the refresh token to get a new access token when it expires
-- `logout/` blacklists the refresh token (requires SimpleJWT blacklist app enabled)
+`user`, `category`, `custom_color`.
 
-## Example payloads (minimal)
+### `Expanse` (extends `baseModel`)
 
-### Create expense
-Request body:
+Expense line: `user`, `category`, `amount`, `note`, `date`.
+
+### `Income` (extends `baseModel`)
+
+`user`, `category`, `amount`, `note`, `date`.
+
+### `Budget` (extends `baseModel`)
+
+`user`, `category`, `amount`, `start_date`, `end_date`.
+
+### `Recurring` (extends `baseModel`)
+
+`user`, `category`, `amount`, `note`, `start_date`, `end_date`, `next_run_date`, `frequency`, `type` (`expense` | `income`), `is_active`. Custom manager **`recurringObjects`**: active rows only; helpers `due_recurrings()`, `update_next_run_date()`, `stop_recurrings()`.
+
+## API base paths
+
+- Auth / user: `/api/v1/user/`
+- Finance resources: `/api/v1/expanse/`
+
+List endpoints use **cursor pagination** (`page_size` 20 by default) unless documented otherwise (e.g. budget summary).
+
+### User (`/api/v1/user/`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `register/` | Register (queues verification email) |
+| POST | `login/` | JWT; body uses `email`, `password`; requires verified user |
+| POST | `token/refresh/` | New access token (`refresh` in body) |
+| POST | `logout/` | Blacklist refresh token |
+| GET / PATCH | `me/` | Current user profile |
+| GET | `verify/<token>/` | Verify email |
+| POST | `resend-verification/` | Body: `email` |
+| POST | `upload-profile-picture/` | Multipart profile upload |
+| POST | `request-password-reset/` | Body: `email` (rate limited) |
+| POST | `reset-password/` | Body: `token`, `new_password` |
+
+### Expanse app (`/api/v1/expanse/`)
+
+Categories, user-category-preferences, expanses, incomes, recurring, budgets — same shapes as in your existing client; budgets summary:
+
+- `GET budgets/summary/?from=YYYY-MM-DD&to=YYYY-MM-DD` — per-budget spend vs cap in the window.
+
+## Frontend integration (JWT)
+
+- Send `Authorization: Bearer <access>` on protected routes.
+- Login returns `access` and `refresh`; call `token/refresh/` with `{ "refresh": "..." }` when access expires.
+- `logout/` blacklists the refresh token (requires `rest_framework_simplejwt.token_blacklist`).
+
+## Example JSON bodies
+
+**Login**
+
+```json
+{ "email": "you@example.com", "password": "your-password" }
+```
+
+**Create expense**
+
 ```json
 { "category": 1, "amount": "120.50", "note": "Groceries", "date": "2026-05-06" }
 ```
 
-### Create recurring expense
-Request body:
+**Create recurring expense**
+
 ```json
 {
   "category": 1,
@@ -234,32 +174,39 @@ Request body:
 }
 ```
 
-### Create budget (category budget)
-Request body:
+**Create budget**
+
 ```json
 { "category": 1, "amount": "5000.00", "start_date": "2026-05-01", "end_date": "2026-05-31" }
 ```
 
-### Create/Update user category preference
-Request body:
+**User category preference**
+
 ```json
 { "category": 1, "custom_color": "#FF5733" }
 ```
 
+**Reset password**
 
-### AWS Architectural diagram ###
+```json
+{ "token": "<token-from-email>", "new_password": "new-secure-password" }
 ```
+
+## Deployment diagram (production compose)
+
+```text
 Internet
    │
    ▼
-Nginx (Reverse Proxy)
+Nginx (TLS, static SPA, /api → Gunicorn)
    │
-   ├── Frontend Container (React)
-   └── Django Backend Container
-           │
-           ├── PostgreSQL Container
-           ├── Redis Container
-           ├── Celery Worker
-           ├── S3 (for media storage)
-           └── Celery Beat
+   ├── Django (Gunicorn) :8000
+   │        ├── PostgreSQL
+   │        ├── Redis
+   │        ├── Celery worker
+   │        ├── Celery beat
+   │        └── S3 (media / profile pictures)
+   └── Certbot (certificate renewal)
 ```
+
+Dev `docker-compose.yml` runs the SPA as its own service on port 3000 instead of baking the build into Nginx.
