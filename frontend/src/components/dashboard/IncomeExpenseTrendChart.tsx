@@ -9,11 +9,17 @@ import {
   YAxis,
 } from 'recharts'
 import type { FinanceTrendRow } from '../../features/dashboard/dashboardTypes'
+import { useDashboardChartTheme } from '../../features/dashboard/useDashboardChartTheme'
 import { formatINR } from '../../utils/currency'
+import {
+  DASHBOARD_CARD_SUBTITLE,
+  DASHBOARD_CARD_TITLE,
+  DASHBOARD_PANEL_CARD,
+  YEAR_SELECT_CLASS,
+} from '../../features/dashboard/dashboardCardStyles'
 
-const INCOME_STROKE = '#00e676'
-const EXPENSE_STROKE = '#ff5252'
-const CARD_BG = '#111827'
+const INCOME_STROKE = '#22c55e'
+const EXPENSE_STROKE = '#f87171'
 
 function num(v: number | string) {
   return Number(v) || 0
@@ -34,9 +40,12 @@ function monthLabel(monthName: string, year: number): string {
 
 type ChartPoint = { label: string; income: number; expense: number }
 
-function niceYMax(maxVal: number): number {
-  if (maxVal <= 0) return 88000
-  const step = Math.ceil(maxVal / 4 / 1000) * 1000
+/** Y-axis max that fits both income and expense series with headroom. */
+function sharedYMax(chartData: ChartPoint[]): number {
+  const peak = chartData.reduce((m, d) => Math.max(m, d.income, d.expense), 0)
+  if (peak <= 0) return 10000
+  const padded = peak * 1.12
+  const step = Math.ceil(padded / 4 / 1000) * 1000
   return Math.max(step * 4, step)
 }
 
@@ -47,6 +56,8 @@ export type IncomeExpenseTrendChartProps = {
   financeTrendRows: FinanceTrendRow[]
   loading: boolean
   error: string | null
+  compact?: boolean
+  fillHeight?: boolean
 }
 
 export function IncomeExpenseTrendChart({
@@ -56,7 +67,10 @@ export function IncomeExpenseTrendChart({
   financeTrendRows,
   loading,
   error,
+  compact = false,
 }: IncomeExpenseTrendChartProps) {
+  const theme = useDashboardChartTheme()
+
   const chartData: ChartPoint[] = useMemo(() => {
     if (selectedYear == null) return []
     return financeTrendRows.map((row) => ({
@@ -66,10 +80,7 @@ export function IncomeExpenseTrendChart({
     }))
   }, [financeTrendRows, selectedYear])
 
-  const yMax = useMemo(() => {
-    const peak = chartData.reduce((m, d) => Math.max(m, d.income, d.expense), 0)
-    return niceYMax(peak)
-  }, [chartData])
+  const yMax = useMemo(() => sharedYMax(chartData), [chartData])
 
   const yTicks = useMemo(() => {
     const step = yMax / 4
@@ -80,52 +91,44 @@ export function IncomeExpenseTrendChart({
     onYearChange(Number(e.target.value))
   }
 
+  const cardClass = compact ? DASHBOARD_PANEL_CARD : theme.cardClass
+
   if (loading) {
     return (
-      <div
-        className="h-[340px] animate-pulse rounded-xl border border-slate-700/60"
-        style={{ backgroundColor: CARD_BG }}
-      />
+      <div className={`${cardClass} h-auto animate-pulse`} style={{ minHeight: compact ? 160 : 240 }} />
     )
   }
 
   if (error) {
     return (
-      <div
-        className="rounded-xl border border-slate-700/60 p-5"
-        style={{ backgroundColor: CARD_BG }}
-      >
-        <h2 className="text-base font-bold text-white">Income vs Expense</h2>
-        <p className="mt-4 text-center text-sm text-rose-400">{error}</p>
+      <div className={`${cardClass} h-auto`}>
+        <h2 className={DASHBOARD_CARD_TITLE}>Income vs Expense</h2>
+        <p className="mt-2 text-center text-[11px] text-rose-600 dark:text-rose-400">{error}</p>
       </div>
     )
   }
 
   if (!chartData.length) {
     return (
-      <div
-        className="rounded-xl border border-slate-700/60 p-5"
-        style={{ backgroundColor: CARD_BG }}
-      >
-        <h2 className="text-base font-bold text-white">Income vs Expense</h2>
-        <p className="mt-4 text-center text-sm text-slate-400">No trend data for this year yet.</p>
+      <div className={`${cardClass} h-auto`}>
+        <h2 className={DASHBOARD_CARD_TITLE}>Income vs Expense</h2>
+        <p className="mt-2 text-center text-[11px] text-slate-500 dark:text-slate-400">No trend data for this year yet.</p>
       </div>
     )
   }
 
   return (
-    <div
-      className="rounded-xl border border-slate-700/60 p-4 sm:p-5"
-      style={{ backgroundColor: CARD_BG }}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className={`${cardClass} flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden`}>
+      <div className="flex shrink-0 items-start justify-between gap-2">
         <div>
-          <h2 className="text-base font-bold text-white">Income vs Expense</h2>
-          <p className="mt-0.5 text-xs text-slate-400">Trend by month (hover points for amounts)</p>
+          <h2 className={DASHBOARD_CARD_TITLE}>Income vs Expense</h2>
+          {!compact ? (
+            <p className={DASHBOARD_CARD_SUBTITLE}>Trend by month (hover points for amounts)</p>
+          ) : null}
         </div>
         <select
           aria-label="Select year"
-          className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 outline-none focus:border-slate-500"
+          className={compact ? YEAR_SELECT_CLASS : theme.selectClass}
           value={selectedYear ?? ''}
           onChange={onSelect}
         >
@@ -141,60 +144,64 @@ export function IncomeExpenseTrendChart({
         </select>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-5 text-xs">
-        <span className="inline-flex items-center gap-1.5 text-slate-300">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: INCOME_STROKE }} />
+      <div className="mt-1 flex shrink-0 items-center gap-3 text-[11px]">
+        <span className={`inline-flex items-center gap-1 ${theme.legendClass}`}>
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: INCOME_STROKE }} />
           Income
         </span>
-        <span className="inline-flex items-center gap-1.5 text-slate-300">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: EXPENSE_STROKE }} />
+        <span className={`inline-flex items-center gap-1 ${theme.legendClass}`}>
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: EXPENSE_STROKE }} />
           Expense
         </span>
       </div>
 
-      <div className="mt-2 h-[300px] w-full">
+      <div
+        className={`dashboard-trend-chart-wrap mt-0.5 w-full min-w-0 shrink-0 ${compact ? '' : 'mt-2'}`}
+      >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
+          <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 12, bottom: 4 }}>
             <defs>
               <linearGradient id="incomeAreaFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={INCOME_STROKE} stopOpacity={0.35} />
+                <stop offset="0%" stopColor={INCOME_STROKE} stopOpacity={0.25} />
                 <stop offset="100%" stopColor={INCOME_STROKE} stopOpacity={0.02} />
               </linearGradient>
               <linearGradient id="expenseAreaFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={EXPENSE_STROKE} stopOpacity={0.3} />
-                <stop offset="100%" stopColor={EXPENSE_STROKE} stopOpacity={0.02} />
+                <stop offset="0%" stopColor={EXPENSE_STROKE} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={EXPENSE_STROKE} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="#334155" strokeOpacity={0.35} vertical={false} />
+            <CartesianGrid
+              stroke={theme.gridStroke}
+              strokeOpacity={theme.gridOpacity}
+              vertical={false}
+            />
             <XAxis
               dataKey="label"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
+              tick={{ fill: theme.tickFill, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
+              interval={0}
+              angle={0}
             />
             <YAxis
               domain={[0, yMax]}
               ticks={yTicks}
               tickFormatter={formatAxisK}
-              tick={{ fill: '#94a3b8', fontSize: 10 }}
+              tick={{ fill: theme.tickFill, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               width={48}
             />
             <Tooltip
-              cursor={{ stroke: '#475569', strokeOpacity: 0.5 }}
-              contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                border: '1px solid rgb(71 85 105 / 0.8)',
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              labelStyle={{ color: '#e2e8f0', fontWeight: 600, marginBottom: 4 }}
+              cursor={{ stroke: theme.gridStroke, strokeOpacity: 0.5 }}
+              contentStyle={theme.tooltipStyle}
+              labelStyle={theme.tooltipLabelStyle}
               formatter={(value, name) => {
                 const isIncome = String(name).toLowerCase() === 'income'
                 return [formatINR(Number(value)), isIncome ? 'Income' : 'Expense']
               }}
             />
+            {/* Income drawn first (behind) */}
             <Area
               type="monotone"
               dataKey="income"
@@ -203,17 +210,20 @@ export function IncomeExpenseTrendChart({
               strokeWidth={2}
               fill="url(#incomeAreaFill)"
               dot={false}
-              activeDot={{ r: 4, fill: INCOME_STROKE, stroke: CARD_BG, strokeWidth: 2 }}
+              activeDot={{ r: 3, fill: INCOME_STROKE, stroke: '#fff', strokeWidth: 1 }}
+              isAnimationActive={false}
             />
+            {/* Expense on top so the red line stays visible */}
             <Area
               type="monotone"
               dataKey="expense"
               name="Expense"
               stroke={EXPENSE_STROKE}
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill="url(#expenseAreaFill)"
-              dot={false}
-              activeDot={{ r: 4, fill: EXPENSE_STROKE, stroke: CARD_BG, strokeWidth: 2 }}
+              dot={{ r: 2, fill: EXPENSE_STROKE, strokeWidth: 0 }}
+              activeDot={{ r: 3, fill: EXPENSE_STROKE, stroke: '#fff', strokeWidth: 1 }}
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>

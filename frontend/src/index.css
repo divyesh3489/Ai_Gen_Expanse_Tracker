@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* App-level base styling (keep minimal; prefer Tailwind classes). */
 html,
 body {
   height: 100%;
@@ -13,10 +12,220 @@ body {
   @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50;
 }
 
-/* Better defaults for form controls in Tailwind. */
 input,
 button,
 textarea,
 select {
   font: inherit;
+}
+
+/* ——— Dashboard layout ——— */
+:root {
+  --dashboard-chart-height: 300px;
+  --dashboard-row-min-height: 320px;
+  --dashboard-gap: 24px;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dashboard-gap);
+  width: 100%;
+  max-width: 100%;
+  padding: 16px 24px;
+  box-sizing: border-box;
+}
+
+.dashboard-section-full {
+  width: 100%;
+  min-width: 0;
+}
+
+/* KPI row: 1 → 2 → 4 columns */
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1201px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Shared 2-column grid for trend+budget and donut+monthly rows */
+.dashboard-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+  min-height: var(--dashboard-row-min-height);
+}
+
+@media (min-width: 768px) {
+  .dashboard-two-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--dashboard-gap);
+  }
+}
+
+.dashboard-two-col > * {
+  height: 100%;
+  min-height: var(--dashboard-row-min-height);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-trend-chart-wrap,
+.dashboard-monthly-chart-wrap {
+  width: 100%;
+  min-width: 0;
+  height: var(--dashboard-chart-height);
+  flex-shrink: 0;
+}
+
+.dashboard-trend-chart-wrap .recharts-responsive-container,
+.dashboard-monthly-chart-wrap .recharts-responsive-container {
+  width: 100% !important;
+  height: var(--dashboard-chart-height) !important;
+}
+
+/* Desktop: compact chart rows to fit viewport without page scroll */
+@media (min-width: 1024px) {
+  :root {
+    --dashboard-chart-height: 150px;
+    --dashboard-row-min-height: 188px;
+    --dashboard-gap: 10px;
+  }
+
+  html:has(.dashboard-content),
+  body:has(.dashboard-content) {
+    overflow: hidden;
+  }
+
+  body:has(.dashboard-content) .min-h-dvh {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  main:has(.dashboard-content) {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  .app-main-content:has(.dashboard-content) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    padding: 0 !important;
+  }
+
+  .dashboard-content {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    gap: var(--dashboard-gap);
+    padding: 10px 16px;
+  }
+
+  .dashboard-two-col {
+    min-height: 0;
+  }
+
+  .dashboard-two-col > * {
+    min-height: var(--dashboard-row-min-height);
+    max-height: var(--dashboard-row-min-height);
+  }
+
+  .donut-chart-wrapper {
+    max-height: 168px !important;
+    max-width: 168px !important;
+  }
+
+  .dashboard-section-transactions {
+    min-height: 0;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  .dashboard-transactions-card {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-transactions-card ul {
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  .dashboard-section-insights {
+    flex-shrink: 0;
+  }
+}
+
+/* Medium screens */
+@media (max-width: 1200px) {
+  .dashboard-content {
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+/* Small screens */
+@media (max-width: 767px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 12px;
+  }
+
+  .dashboard-card {
+    margin: 0;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .dashboard-section-transactions {
+    margin-bottom: 80px;
+  }
+
+  .dashboard-section-insights {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding: 8px 12px 12px;
+    background: linear-gradient(to top, rgb(15 23 42 / 0.98) 70%, transparent);
+  }
+
+  .dashboard-section-insights .grid {
+    margin: 0;
+  }
+
+  html:not(.dark) .dashboard-section-insights {
+    background: linear-gradient(to top, rgb(248 250 252 / 0.98) 70%, transparent);
+  }
+
+  .donut-chart-wrapper {
+    max-height: 240px;
+    max-width: 100%;
+  }
 }

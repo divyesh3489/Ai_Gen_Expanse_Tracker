@@ -492,35 +492,73 @@ class BudgetSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        budget_catch_key = expanse_utils.get_budget_catch_key(request.user.id, "summary", "overall")
-        if cache.get(budget_catch_key):
-            print("Cache hit for budget summary")
-            return Response(cache.get(budget_catch_key), status=status.HTTP_200_OK)
-        budget_qs = Budget.objects.filter(user=request.user).select_related("category").order_by("category__name")
+        from_date = request.query_params.get("from")
+        to_date = request.query_params.get("to")
 
+        if not from_date or not to_date:
+            return Response(
+                {"detail": "Query params 'from' and 'to' are required (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            from_date = expanse_utils.convert_date_to_datetime(from_date)
+            to_date = expanse_utils.convert_date_to_datetime(to_date)
+        except Exception:
+            return Response(
+                {"detail": "Query params 'from' and 'to' must be in the format YYYY-MM-DD."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if from_date > to_date:
+            return Response(
+                {"detail": "Query param 'from' must be before 'to'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        budget_catch_key = f"budget_summary_{request.user.id}_{from_date}_{to_date}"
+        cached = cache.get(budget_catch_key)
+        if cached is not None:
+            return Response(cached, status=status.HTTP_200_OK)
+
+        budget_qs = Budget.objects.filter(user=request.user).select_related("category").order_by("category__name")
         response_data = []
 
         for budget in budget_qs:
-            start_date, end_date = expanse_utils.get_start_and_end_date_according_to_frequency(budget.budget_type)
             if budget.category is None:
-                total_spend = Expanse.objects.filter(user=request.user, date__gte=start_date, date__lte=end_date).aggregate(total=Sum("amount"))["total"] or 0
+                total_spend = (
+                    Expanse.objects.filter(
+                        user=request.user,
+                        date__gte=from_date,
+                        date__lte=to_date,
+                    ).aggregate(total=Sum("amount"))["total"]
+                    or 0
+                )
             else:
-                total_spend = Expanse.objects.filter(user=request.user, category=budget.category, date__gte=start_date, date__lte=end_date).aggregate(total=Sum("amount"))["total"] or 0
-            percent_used = (total_spend / budget.amount) * 100 if budget.amount and budget.amount != 0 else 0
-            remaining_amount = budget.amount - total_spend
+                total_spend = (
+                    Expanse.objects.filter(
+                        user=request.user,
+                        category=budget.category,
+                        date__gte=from_date,
+                        date__lte=to_date,
+                    ).aggregate(total=Sum("amount"))["total"]
+                    or 0
+                )
+            budget_amount = float(budget.amount)
+            spent = float(total_spend)
+            percent_used = (spent / budget_amount) * 100 if budget_amount else 0
+            remaining_amount = budget_amount - spent
             response_data.append(
                 {
                     "id": budget.id,
-                    "category": budget.category.name if budget.category else "Overall",
-                    "category_color": budget.category.default_color if budget.category else "#64748B",
-                    "amount": float(budget.amount),
-                    "total_spend": float(total_spend),
+                    "category": budget.category_id,
+                    "category_name": budget.category.name if budget.category else None,
+                    "budget_amount": budget_amount,
+                    "spent_amount": spent,
                     "remaining_amount": round(remaining_amount, 2),
-                    "budget_type": budget.budget_type,
-                    "percent_used": round(percent_used, 2),
+                    "progress_percent": round(percent_used, 2),
+                    "is_over_budget": spent > budget_amount,
                 }
             )
-        cache.set(budget_catch_key, response_data, timeout=300)  # Cache for 5 minutes
+        cache.set(budget_catch_key, response_data, timeout=300)
         return Response(response_data, status=status.HTTP_200_OK)
 
 class DashboardSummaryView(APIView):

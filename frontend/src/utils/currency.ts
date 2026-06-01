@@ -1,15 +1,29 @@
+/** INR with exactly 2 decimal places (dashboard legends, tooltips). */
+export function formatINRAmount(amount: number | null | undefined): string {
+  const n = Number(amount)
+  const value = Number.isFinite(n) ? n : 0
+  return value.toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 export function formatINR(amount: number | null | undefined): string {
   if (amount === null || amount === undefined || Number.isNaN(Number(amount))) {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(0)
   }
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(amount))
 }
 

@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react'
 import { Briefcase, CreditCard, Rocket, Shield } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { formatINR } from '../../utils/currency'
 import type { DashboardSummary } from '../../features/expanses/dashboardSummaryApi'
@@ -21,9 +23,57 @@ type Props = {
   loading: boolean
   error: boolean
   onRetry: () => void
+  compact?: boolean
 }
 
-export function SummaryCards({ summary, loading, error, onRetry }: Props) {
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  iconClass,
+  footer,
+  compact,
+}: {
+  label: string
+  value: string
+  icon: LucideIcon
+  iconClass: string
+  footer: ReactNode
+  compact?: boolean
+}) {
+  return (
+    <div
+      className={`dashboard-card rounded-xl border border-slate-200 bg-[#F8F9FA] shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none ${
+        compact ? 'p-2.5' : 'p-4'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{label}</p>
+          <p
+            className={`font-semibold tabular-nums text-[#1A1A2E] dark:text-white ${
+              compact ? 'mt-0.5 text-[clamp(18px,1.6vw,24px)] leading-tight' : 'mt-1 text-2xl'
+            }`}
+          >
+            {value}
+          </p>
+          {footer ? <div className={compact ? 'mt-1' : 'mt-2'}>{footer}</div> : null}
+        </div>
+        <div
+          className={`grid shrink-0 place-items-center rounded-xl ${iconClass} ${
+            compact ? 'h-8 w-8' : 'h-10 w-10'
+          }`}
+        >
+          <Icon className={compact ? 'h-4 w-4' : 'h-5 w-5'} aria-hidden />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function SummaryCards({ summary, loading, error, onRetry, compact = false }: Props) {
+  const gridClass = `dashboard-kpi-grid ${compact ? 'gap-2' : 'gap-3'}`
+
   if (error && !loading) {
     return (
       <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/50 dark:bg-rose-950/40">
@@ -37,11 +87,11 @@ export function SummaryCards({ summary, loading, error, onRetry }: Props) {
 
   if (loading || !summary) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-        <StatCardSkeleton />
+      <div className={gridClass}>
+        <StatCardSkeleton compact={compact} />
+        <StatCardSkeleton compact={compact} />
+        <StatCardSkeleton compact={compact} />
+        <StatCardSkeleton compact={compact} />
       </div>
     )
   }
@@ -49,66 +99,45 @@ export function SummaryCards({ summary, loading, error, onRetry }: Props) {
   const sr = savingRateMoMPercent(summary)
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-slate-500 dark:text-slate-400">Total Income</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{formatINR(num(summary.total_monthly_income))}</div>
-            <div className="mt-2">
-              <DeltaBadge value={trendPercent(summary.last_month_income_change_percent)} />
-            </div>
-          </div>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-400">
-            <Briefcase className="h-5 w-5" aria-hidden />
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-slate-500 dark:text-slate-400">Total Expense</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{formatINR(num(summary.total_monthly_spend))}</div>
-            <div className="mt-2">
-              <DeltaBadge value={trendPercent(summary.last_month_spend_change_percent)} inverse />
-            </div>
-          </div>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-500/15 text-rose-400">
-            <CreditCard className="h-5 w-5" aria-hidden />
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-slate-500 dark:text-slate-400">Net Savings</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{formatINR(num(summary.net_monthly))}</div>
-            <div className="mt-2">
-              <DeltaBadge value={trendPercent(summary.last_month_net_change_percent)} />
-            </div>
-          </div>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-400">
-            <Rocket className="h-5 w-5" aria-hidden />
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-slate-500 dark:text-slate-400">Savings Rate</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{num(summary.saving_rate_percent).toFixed(1)}%</div>
-            <div className="mt-2">
-              {sr === null ? <span className="text-sm text-slate-500 dark:text-slate-400">—</span> : <DeltaBadge value={sr} />}
-            </div>
-          </div>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/15 text-sky-400">
-            <Shield className="h-5 w-5" aria-hidden />
-          </div>
-        </div>
-      </div>
+    <div className={gridClass}>
+      <KpiCard
+        compact={compact}
+        label="Total Income"
+        value={formatINR(num(summary.total_monthly_income))}
+        icon={Briefcase}
+        iconClass="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+        footer={<DeltaBadge value={trendPercent(summary.last_month_income_change_percent)} compact={compact} />}
+      />
+      <KpiCard
+        compact={compact}
+        label="Total Expense"
+        value={formatINR(num(summary.total_monthly_spend))}
+        icon={CreditCard}
+        iconClass="bg-rose-500/15 text-rose-600 dark:text-rose-400"
+        footer={<DeltaBadge value={trendPercent(summary.last_month_spend_change_percent)} inverse compact={compact} />}
+      />
+      <KpiCard
+        compact={compact}
+        label="Net Savings"
+        value={formatINR(num(summary.net_monthly))}
+        icon={Rocket}
+        iconClass="bg-violet-500/15 text-violet-600 dark:text-violet-400"
+        footer={<DeltaBadge value={trendPercent(summary.last_month_net_change_percent)} compact={compact} />}
+      />
+      <KpiCard
+        compact={compact}
+        label="Savings Rate"
+        value={`${num(summary.saving_rate_percent).toFixed(1)}%`}
+        icon={Shield}
+        iconClass="bg-sky-500/15 text-sky-600 dark:text-sky-400"
+        footer={
+          sr === null ? (
+            <span className="text-sm text-slate-500 dark:text-slate-400">—</span>
+          ) : (
+            <DeltaBadge value={sr} compact={compact} />
+          )
+        }
+      />
     </div>
   )
 }

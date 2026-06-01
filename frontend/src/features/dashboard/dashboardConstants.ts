@@ -1,6 +1,9 @@
 /** Toggle to use mock data for budget / donut / recent panels (per design doc). */
 export const USE_DUMMY_DASHBOARD_DATA = false
 
+/** Default Recharts height (mobile); desktop uses CSS --dashboard-chart-height. */
+export const DASHBOARD_CHART_HEIGHT = 220
+
 export const DUMMY_BUDGETS = [
   { category: 'Food', color: '#ef4444', spent: 4500, limit: 6000, percent: 75 },
   { category: 'Shopping', color: '#3b82f6', spent: 9000, limit: 7000, percent: 128 },

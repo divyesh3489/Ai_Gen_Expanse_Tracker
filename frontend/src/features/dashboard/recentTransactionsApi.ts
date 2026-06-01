@@ -31,5 +31,12 @@ export async function fetchRecentTransactions(): Promise<DashboardTransaction[]>
     '/v1/expanse/reports/dashboard/recent-transactions/',
   )
   const rows = Array.isArray(res.data) ? res.data : []
-  return rows.map(mapRow)
+  return rows
+    .map(mapRow)
+    .sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateDiff !== 0) return dateDiff
+      return b.id - a.id
+    })
+    .slice(0, 5)
 }

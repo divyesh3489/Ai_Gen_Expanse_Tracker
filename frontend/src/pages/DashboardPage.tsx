@@ -53,49 +53,49 @@ export function DashboardPage() {
   }, [user?.first_name, user?.email])
 
   return (
-    <div className="space-y-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6 dark:border-slate-800 dark:bg-[#0d1117]">
-      <DashboardHeader
-        greeting={greeting}
-        firstName={firstName}
-        periodPreset={periodPreset}
-        onPeriodChange={setPeriodPreset}
-        customMonth={customMonth}
-        onCustomMonthChange={setCustomMonth}
-      />
-
-      <SummaryCards
-        summary={summary}
-        loading={summaryLoading}
-        error={summaryError}
-        onRetry={() => {
-          refetchSummary()
-        }}
-      />
-
-      <div className="grid gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="lg:col-span-3">
-          <IncomeExpenseTrendChart
-            years={chartYear.years}
-            selectedYear={chartYear.selectedYear}
-            onYearChange={chartYear.setSelectedYear}
-            financeTrendRows={chartYear.financeTrendRows}
-            loading={chartYear.areaChartLoading}
-            error={chartYear.trendError}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <BudgetProgressPanel
-            rows={budgetRows}
-            loading={budgetLoading}
-            error={budgetError}
-            onRetry={() => {
-              refetchBudget()
-            }}
-          />
-        </div>
+    <div className="dashboard-content lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-slate-50 dark:lg:border-slate-800 dark:lg:bg-[#0d1117]">
+      <div className="dashboard-section-header dashboard-section-full">
+        <DashboardHeader
+          greeting={greeting}
+          firstName={firstName}
+          periodPreset={periodPreset}
+          onPeriodChange={setPeriodPreset}
+          customMonth={customMonth}
+          onCustomMonthChange={setCustomMonth}
+          compact
+        />
       </div>
 
-      <div className="grid items-stretch gap-3 lg:grid-cols-2 lg:gap-4">
+      <div className="dashboard-section-kpi dashboard-section-full">
+        <SummaryCards
+          summary={summary}
+          loading={summaryLoading}
+          error={summaryError}
+          onRetry={refetchSummary}
+          compact
+        />
+      </div>
+
+      <div className="dashboard-two-col dashboard-section-trend">
+        <IncomeExpenseTrendChart
+          years={chartYear.years}
+          selectedYear={chartYear.selectedYear}
+          onYearChange={chartYear.setSelectedYear}
+          financeTrendRows={chartYear.financeTrendRows}
+          loading={chartYear.areaChartLoading}
+          error={chartYear.trendError}
+          compact
+        />
+        <BudgetProgressPanel
+          rows={budgetRows}
+          loading={budgetLoading}
+          error={budgetError}
+          onRetry={refetchBudget}
+          compact
+        />
+      </div>
+
+      <div className="dashboard-two-col dashboard-section-expense-charts w-full">
         <ExpenseDonutSection
           slices={categorySlices}
           loading={categoryLoading}
@@ -108,17 +108,23 @@ export function DashboardPage() {
           onYearChange={chartYear.setSelectedYear}
           financeTrendRows={chartYear.financeTrendRows}
           loading={chartYear.monthlyChartLoading}
+          compact
         />
       </div>
 
-      <RecentTransactionsPanel
-        items={recentTransactions}
-        loading={recentLoading}
-        error={recentError}
-        onRetry={refetchRecent}
-      />
+      <div className="dashboard-section-transactions dashboard-section-full dashboard-transactions-panel">
+        <RecentTransactionsPanel
+          items={recentTransactions}
+          loading={recentLoading}
+          error={recentError}
+          onRetry={refetchRecent}
+          compact
+        />
+      </div>
 
-      <InsightsRow summary={summary} topCategory={topExpenseCategory} />
+      <div className="dashboard-section-insights dashboard-section-full dashboard-insights-panel">
+        <InsightsRow summary={summary} topCategory={topExpenseCategory} compact />
+      </div>
     </div>
   )
 }

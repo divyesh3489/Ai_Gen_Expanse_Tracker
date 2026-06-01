@@ -9,9 +9,10 @@ function num(v: number | string | null | undefined) {
 type Props = {
   summary: DashboardSummary | null
   topCategory: ExpenseCategorySlice | null
+  compact?: boolean
 }
 
-export function InsightsRow({ summary, topCategory }: Props) {
+export function InsightsRow({ summary, topCategory, compact = false }: Props) {
   const spendChg = summary?.last_month_spend_change_percent
   const hasSpendTrend = spendChg !== null && spendChg !== undefined
   const spendChange = num(spendChg)
@@ -27,36 +28,60 @@ export function InsightsRow({ summary, topCategory }: Props) {
     {
       icon: TrendingUp,
       color: 'text-emerald-500 dark:text-emerald-400',
-      borderClass: 'border-l-4 border-l-emerald-500',
+      borderClass: 'border-l-[3px] border-l-emerald-500',
       title: hasSpendTrend
         ? `Spending ${spendChange >= 0 ? 'increased' : 'decreased'} by ${Math.abs(spendChange).toFixed(1)}%`
         : 'Spending trend',
-      body: hasSpendTrend
-        ? 'Compared to the prior month (current month view only).'
-        : 'Month-over-month comparison is available only when the selected range is the current calendar month.',
+      body: hasSpendTrend ? 'Vs prior month.' : 'MoM when viewing current month.',
     },
     {
       icon: Crown,
       color: 'text-amber-500 dark:text-amber-400',
-      borderClass: 'border-l-4 border-l-amber-500',
-      title: topCategory ? `Top category: ${topCategory.category}` : 'Top category: —',
-      body: topCategory ? `${topCategory.percent.toFixed(0)}% of expenses in this range.` : 'No category spend in this range yet.',
+      borderClass: 'border-l-[3px] border-l-amber-500',
+      title: topCategory ? `Top: ${topCategory.category}` : 'Top category: —',
+      body: topCategory ? `${topCategory.percent.toFixed(0)}% of spend.` : 'No spend yet.',
     },
     {
       icon: Wallet,
       color: 'text-sky-500 dark:text-sky-400',
-      borderClass: 'border-l-4 border-l-sky-500',
-      title: rate > 40 ? `Great job! You saved ${rate.toFixed(1)}%` : `Savings rate: ${rate.toFixed(1)}%`,
-      body: rate > 40 ? 'Your savings rate is above 40% for this period.' : 'Try increasing income or trimming expenses to lift your rate.',
+      borderClass: 'border-l-[3px] border-l-sky-500',
+      title: rate > 40 ? `Saved ${rate.toFixed(1)}%` : `Rate ${rate.toFixed(1)}%`,
+      body: rate > 40 ? 'Above 40% this period.' : 'Trim expenses to lift rate.',
     },
     {
       icon: Lightbulb,
       color: 'text-violet-500 dark:text-violet-400',
-      borderClass: 'border-l-4 border-l-violet-500',
+      borderClass: 'border-l-[3px] border-l-violet-500',
       title: 'Tip',
       body: tip,
     },
   ]
+
+  if (compact) {
+    return (
+      <div className="h-full max-h-[70px] overflow-hidden">
+        <div className="grid h-full grid-cols-4 gap-2">
+          {cards.map((c, idx) => {
+            const Icon = c.icon
+            return (
+              <div
+                key={idx}
+                className={`flex min-w-0 items-start gap-1.5 overflow-hidden rounded-lg border border-slate-200 bg-[#F8F9FA] px-2 py-2 dark:border-slate-800 dark:bg-slate-900/60 ${c.borderClass}`}
+              >
+                <Icon className={`h-4 w-4 shrink-0 ${c.color}`} />
+                <div className="min-w-0">
+                  <div className="truncate text-[11px] font-bold leading-tight text-[#1A1A2E] dark:text-white">
+                    {c.title}
+                  </div>
+                  <p className="truncate text-[10px] leading-tight text-slate-500 dark:text-slate-400">{c.body}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -67,10 +92,10 @@ export function InsightsRow({ summary, topCategory }: Props) {
           return (
             <div
               key={idx}
-              className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 ${c.borderClass}`}
+              className={`rounded-xl border border-slate-200 bg-[#F8F9FA] p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 ${c.borderClass}`}
             >
               <Icon className={`h-5 w-5 ${c.color}`} />
-              <div className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">{c.title}</div>
+              <div className="mt-2 text-sm font-semibold text-[#1A1A2E] dark:text-white">{c.title}</div>
               <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{c.body}</p>
             </div>
           )

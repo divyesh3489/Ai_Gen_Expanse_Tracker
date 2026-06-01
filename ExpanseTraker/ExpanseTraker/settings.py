@@ -33,7 +33,10 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", False)
 
-ALLOWED_HOSTS = ["13.232.150.67","expansetraker.eliscops.com","localhost","127.0.0.1"]
+PRIVATE_IP = os.getenv("PRIVATE_IP","localhost")
+print(f"Private IP Address: {PRIVATE_IP}")
+
+ALLOWED_HOSTS = ["13.232.150.67","expansetraker.eliscops.com","localhost","127.0.0.1",PRIVATE_IP]
 
 
 
@@ -68,6 +71,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://13.232.150.67",
     "https://expansetraker.eliscops.com",
     "https://13.232.150.67",
+    f"http://{PRIVATE_IP}:3000",
 ]
 
 # If you ever use cookie-based auth (session/CSRF cookies), Django requires trusted origins
@@ -75,6 +79,7 @@ CORS_ALLOWED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = [
     "https://expansetraker.eliscops.com",
     "https://13.232.150.67",
+    f"https://{PRIVATE_IP}:3000",
 ]
 
 INSTALLED_APPS += custom_apps

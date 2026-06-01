@@ -9,14 +9,17 @@ import {
   YAxis,
 } from 'recharts'
 import {
+  DASHBOARD_CARD_HEADER,
+  DASHBOARD_CARD_SUBTITLE,
+  DASHBOARD_CARD_TITLE,
   DASHBOARD_ROW_CARD,
   YEAR_SELECT_CLASS,
 } from '../../features/dashboard/dashboardCardStyles'
+import { useDashboardChartTheme } from '../../features/dashboard/useDashboardChartTheme'
 import type { FinanceTrendRow } from '../../features/dashboard/dashboardTypes'
 import { formatINR } from '../../utils/currency'
 
 const BAR_FILL = '#FF8A80'
-
 function num(v: number | string) {
   return Number(v) || 0
 }
@@ -46,6 +49,7 @@ type Props = {
   onYearChange: (year: number) => void
   financeTrendRows: FinanceTrendRow[]
   loading: boolean
+  compact?: boolean
 }
 
 export function MonthlyExpenseBarChart({
@@ -54,11 +58,14 @@ export function MonthlyExpenseBarChart({
   onYearChange,
   financeTrendRows,
   loading,
+  compact = false,
 }: Props) {
+  const theme = useDashboardChartTheme()
+
   const chartData = useMemo(() => {
     if (selectedYear == null) return []
     return financeTrendRows.map((row) => ({
-      label: monthShort(row.month, selectedYear),
+      month: monthShort(row.month, selectedYear),
       spend: num(row.total_spend),
     }))
   }, [financeTrendRows, selectedYear])
@@ -78,15 +85,20 @@ export function MonthlyExpenseBarChart({
   }
 
   if (loading) {
-    return <div className={`${DASHBOARD_ROW_CARD} animate-pulse`} />
+    return (
+      <div
+        className={`${DASHBOARD_ROW_CARD} monthly-expense-card h-full animate-pulse`}
+        style={{ minHeight: 'var(--dashboard-row-min-height)' }}
+      />
+    )
   }
 
   return (
-    <div className={DASHBOARD_ROW_CARD}>
-      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className={`${DASHBOARD_ROW_CARD} monthly-expense-card flex h-full min-h-0 flex-col overflow-hidden`}>
+      <div className={`${DASHBOARD_CARD_HEADER} flex shrink-0 items-start justify-between gap-1`}>
         <div>
-          <h2 className="text-base font-bold text-white">Monthly expense</h2>
-          <p className="mt-0.5 text-xs text-slate-400">Total spend per month</p>
+          <h2 className={DASHBOARD_CARD_TITLE}>Monthly expense</h2>
+          {!compact ? <p className={DASHBOARD_CARD_SUBTITLE}>Total spend per month</p> : null}
         </div>
         <select
           aria-label="Select year for monthly expense"
@@ -106,42 +118,58 @@ export function MonthlyExpenseBarChart({
         </select>
       </div>
 
-      <div className="mt-2 min-h-0 flex-1">
+      <div className="dashboard-monthly-chart-wrap mt-0.5 w-full shrink-0">
         {!chartData.length ? (
-          <p className="flex h-full items-center justify-center text-sm text-slate-400">
+          <p
+            className="flex items-center justify-center text-[11px] text-slate-500 dark:text-slate-400"
+            style={{ height: 'var(--dashboard-chart-height)' }}
+          >
             No expense data for this year.
           </p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
-              <CartesianGrid stroke="#334155" strokeOpacity={0.35} vertical={false} />
+            <BarChart
+              data={chartData}
+              margin={{ top: 8, right: 16, left: 12, bottom: 4 }}
+              barCategoryGap="20%"
+              barGap={4}
+            >
+              <CartesianGrid
+                stroke={theme.gridStroke}
+                strokeOpacity={theme.gridOpacity}
+                vertical={false}
+              />
               <XAxis
-                dataKey="label"
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                dataKey="month"
+                tick={{ fill: theme.tickFill, fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
+                interval={0}
+                padding={{ left: 20, right: 20 }}
               />
               <YAxis
                 domain={[0, yMax]}
                 ticks={yTicks}
                 tickFormatter={formatAxisK}
-                tick={{ fill: '#94a3b8', fontSize: 10 }}
+                tick={{ fill: theme.tickFill, fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
                 width={48}
               />
               <Tooltip
                 cursor={{ fill: 'rgba(255, 138, 128, 0.15)' }}
-                contentStyle={{
-                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                  border: '1px solid rgb(71 85 105 / 0.8)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                labelStyle={{ color: '#e2e8f0', fontWeight: 600 }}
+                contentStyle={theme.tooltipStyle}
+                labelStyle={theme.tooltipLabelStyle}
                 formatter={(value) => [formatINR(Number(value)), 'Expense']}
               />
-              <Bar dataKey="spend" fill={BAR_FILL} radius={[4, 4, 0, 0]} name="Expense" />
+              <Bar
+                dataKey="spend"
+                fill={BAR_FILL}
+                radius={[3, 3, 0, 0]}
+                name="Expense"
+                barSize={40}
+                isAnimationActive={false}
+              />
             </BarChart>
           </ResponsiveContainer>
         )}

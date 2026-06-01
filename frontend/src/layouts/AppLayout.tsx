@@ -58,7 +58,7 @@ export function AppLayout() {
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
       <div className="flex min-h-dvh w-full">
-        <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950">
+        <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 overflow-hidden border-r border-slate-200 bg-white lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950">
           <div className="px-5 py-5">
             <Link to="/app" className="flex items-center gap-2">
               <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-slate-900">
@@ -71,7 +71,7 @@ export function AppLayout() {
             </Link>
           </div>
 
-          <nav className="px-3">
+          <nav className="min-h-0 flex-1 overflow-y-auto px-3">
             {nav.map((item) => {
               const Icon = item.icon
               return (
@@ -81,10 +81,10 @@ export function AppLayout() {
                   end={Boolean(item.end)}
                   className={({ isActive }) =>
                     clsx(
-                      'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
+                      'mb-0.5 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
                       isActive
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900/40',
+                        ? 'bg-[#1a1a2e] font-medium text-white dark:bg-white dark:text-slate-900'
+                        : 'text-[#4B5563] hover:bg-[#F3F4F6] dark:text-slate-200 dark:hover:bg-slate-900/40',
                     )
                   }
                 >
@@ -110,9 +110,9 @@ export function AppLayout() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1">
-          {/* Mobile nav trigger */}
-          <div className="fixed left-4 top-4 z-40 lg:hidden">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:h-dvh lg:overflow-hidden">
+          {/* Mobile nav trigger — in document flow so it does not overlap charts */}
+          <div className="flex shrink-0 items-center px-4 pb-1 pt-3 lg:hidden">
             <button
               type="button"
               aria-label="Open navigation"
@@ -221,7 +221,7 @@ export function AppLayout() {
             </div>
           </div>
 
-          <div className="w-full min-w-0 px-4 pb-6 pt-20 lg:px-6 lg:py-6">
+          <div className="app-main-content h-full w-full min-w-0 flex-1 px-0 pb-6 pt-0 lg:overflow-hidden lg:p-0">
             <Outlet />
           </div>
         </main>
