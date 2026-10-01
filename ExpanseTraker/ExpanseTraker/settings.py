@@ -35,6 +35,10 @@ DEBUG = os.getenv("DEBUG", False)
 
 ALLOWED_HOSTS = ["13.232.150.67","expansetraker.eliscops.com","localhost","127.0.0.1"]
 
+# Extra public domains, comma separated, e.g. APP_DOMAINS=expanse.shivamcodes.dev
+APP_DOMAINS = [d.strip() for d in os.getenv("APP_DOMAINS", "").split(",") if d.strip()]
+ALLOWED_HOSTS += APP_DOMAINS
+
 
 
 
@@ -53,7 +57,6 @@ custom_apps = [
     "user",
     "expanse",
     'core',
-    "storages",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -68,14 +71,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://13.232.150.67",
     "https://expansetraker.eliscops.com",
     "https://13.232.150.67",
-]
+] + [f"https://{d}" for d in APP_DOMAINS]
 
 # If you ever use cookie-based auth (session/CSRF cookies), Django requires trusted origins
 # for HTTPS POST/PUT/PATCH/DELETE requests coming from your frontend domain.
 CSRF_TRUSTED_ORIGINS = [
     "https://expansetraker.eliscops.com",
     "https://13.232.150.67",
-]
+] + [f"https://{d}" for d in APP_DOMAINS]
 
 INSTALLED_APPS += custom_apps
 
@@ -230,6 +233,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Behind nginx: trust its X-Forwarded-Proto so media URLs are built as https
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -256,14 +262,6 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 REDIS_CACHE_URL = os.getenv("REDIS_CACHE_URL", "redis://localhost:6379/1")
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-south-1")
-AWS_QUERYSTRING_AUTH = False
-AWS_DEFAULT_ACL = None  
-AWS_S3_FILE_OVERWRITE = False
-AWS_S3_SIGNATURE_VERSION = "s3v4"
 
 CACHES = {
     "default": {

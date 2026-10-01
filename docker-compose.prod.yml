@@ -3,23 +3,14 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+    # Only reachable from the server; the host nginx proxies the domain here and handles SSL
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:8081:80"
     volumes:
-      - letsencrypt:/etc/letsencrypt
-      - certbot-webroot:/var/www/certbot
       - staticfiles:/staticfiles:ro
+      - ./ExpanseTraker/media:/media:ro
     depends_on:
       - web
-
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - letsencrypt:/etc/letsencrypt
-      - certbot-webroot:/var/www/certbot
-    # renewal loop (safe to keep running)
-    command: sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
 
   web:
     build:
@@ -83,7 +74,5 @@ services:
 
 volumes:
   postgres_data: {}
-  letsencrypt: {}
-  certbot-webroot: {}
   staticfiles: {}
 

@@ -10,13 +10,13 @@ from .models import User, VerificationToken , PasswordResetToken
 from .serializers import UserSerializer
 from .tasks import send_verification_email,send_password_reset_email
 from rest_framework.throttling import ScopedRateThrottle
-from .utils import s3
+from .utils import media
 # Create your views here.
 
 
 class RegisterUser(APIView):
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = UserSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             send_verification_email.delay(serializer.instance.id)
@@ -38,7 +38,7 @@ class UserDetails(APIView):
             return Response(
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        serializer = UserSerializer(queryset.first())
+        serializer = UserSerializer(queryset.first(), context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def patch(self, request):
@@ -48,7 +48,7 @@ class UserDetails(APIView):
             return Response(
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        serializer = UserSerializer(queryset.first(), data=request.data, partial=True)
+        serializer = UserSerializer(queryset.first(), data=request.data, partial=True, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -168,14 +168,15 @@ class UploadProfilePicture(APIView):
             return Response(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
-        file_url = s3.upload_profile_picture_to_s3(file, user.id)
-        if not file_url:
+        file_path = media.save_profile_picture(file, user.id)
+        if not file_path:
             return Response(
-                {"error": "Failed to upload profile picture"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"error": "Only image files (jpg, jpeg, png, gif, webp) are allowed"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        user.profile_picture = file_url
+        user.profile_picture = file_path
         user.save()
+        file_url = media.media_url(request, file_path)
         return Response(
             {"message": "Profile picture uploaded successfully", "profile_picture": file_url},
             status=status.HTTP_200_OK,

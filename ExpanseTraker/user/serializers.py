@@ -2,10 +2,14 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from .utils import media
+
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -34,6 +38,13 @@ class UserSerializer(serializers.ModelSerializer):
             "full_name": {"read_only": True},
             "profile_picture": {"read_only": True},
         }
+
+    def get_profile_picture(self, obj):
+        path = obj.profile_picture or media.DEFAULT_PROFILE_PICTURE
+        request = self.context.get("request")
+        if request is None:
+            return path
+        return media.media_url(request, path)
 
     def create(self, validated_data):
         password = validated_data.pop("password", None)

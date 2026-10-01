@@ -3,7 +3,6 @@ from datetime import timedelta
 
 from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
 from django.db import models
-from django.conf import settings
 
 
 # Create your models here.
@@ -55,7 +54,8 @@ class User(AbstractUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
-    profile_picture = models.URLField(blank=True, null=True,default=f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/profile-pictures/default/default-profile-picture.png")
+    # Path relative to MEDIA_ROOT; empty means the default picture
+    profile_picture = models.CharField(max_length=255, blank=True, null=True)
     objects = UserManager()
     username = None
     active_objects = ActiveUserManager()
