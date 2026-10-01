@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
-    # Only reachable from the server; the host nginx proxies the domain here and handles SSL
+    # Only reachable from the server; the host Apache proxies the domain here and handles SSL
     ports:
       - "127.0.0.1:8081:80"
     volumes:

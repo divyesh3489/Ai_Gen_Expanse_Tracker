@@ -7,7 +7,7 @@ This guide deploys Expanse Tracker on a server that **already runs another websi
 ```
 Internet ──► Server public IP :80 / :443
                     │
-           Host Nginx + certbot (SSL)
+           Host Apache + certbot (SSL)
            ├── other-project domain      ──► other project
            └── expanse.shivamcodes.dev   ──► 127.0.0.1:8081
                                                   │
@@ -19,12 +19,14 @@ Internet ──► Server public IP :80 / :443
                                     └── /media/    → uploaded profile pictures
 ```
 
-- The host Nginx owns ports 80 and 443. It handles HTTPS and sends each request to the right project based on the domain name.
+- The host Apache (already serving the other project) owns ports 80 and 443. It handles HTTPS and sends each request to the right project based on the domain name.
 - This project's Docker Nginx listens only on `127.0.0.1:8081`, so it doesn't conflict with the other project.
 - Postgres, Redis, Celery and Celery Beat run inside Docker and are not exposed to the internet.
 - Uploaded files are stored on the server's disk in `ExpanseTraker/media/`. AWS S3 is no longer used.
 
-**Requirements:** a Linux server with Docker, Docker Compose and Nginx installed directly on the server (not in Docker).
+**Requirements:** a Linux server with Docker, the Docker Compose plugin (`docker compose version` must work) and Apache installed directly on the server (not in Docker). Your user needs sudo access to Apache (`a2enmod`, `a2ensite`, `systemctl reload apache2`); otherwise ask the server admin to do steps 6 and 7.
+
+> Don't install or start Nginx on the host. Apache already holds ports 80/443, so host Nginx fails to start with "Address already in use".
 
 ---
 
@@ -107,7 +109,7 @@ Check that port 8081 is free:
 sudo ss -tlnp | grep 8081    # should print nothing
 ```
 
-If 8081 is already in use, pick another port. Change it in both `docker-compose.prod.yml` (`127.0.0.1:8081:80`) and `deploy/host-nginx.conf` (`proxy_pass`).
+If 8081 is already in use, pick another port. Change it in both `docker-compose.prod.yml` (`127.0.0.1:8081:80`) and `deploy/host-apache.conf` (`ProxyPass` / `ProxyPassReverse`).
 
 Build and start:
 
@@ -131,30 +133,37 @@ Create an admin user:
 docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
 ```
 
-## 6. Host Nginx
+## 6. Host Apache
 
 ```bash
-sudo cp deploy/host-nginx.conf /etc/nginx/sites-available/expanse.shivamcodes.dev
-sudo ln -s /etc/nginx/sites-available/expanse.shivamcodes.dev /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+sudo a2enmod proxy proxy_http headers
+sudo cp deploy/host-apache.conf /etc/apache2/sites-available/expanse.shivamcodes.dev.conf
+sudo a2ensite expanse.shivamcodes.dev
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+Check that Apache routes the domain here and the other project's sites are still listed:
+
+```bash
+sudo apache2ctl -S
 ```
 
 ## 7. SSL certificate (certbot)
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx    # skip if already installed
-sudo certbot --nginx -d expanse.shivamcodes.dev
+sudo apt install -y certbot python3-certbot-apache   # skip if already installed
+sudo certbot --apache -d expanse.shivamcodes.dev
 sudo certbot renew --dry-run                         # confirms auto-renewal works
 ```
 
-Certbot adds the HTTPS settings and the HTTP → HTTPS redirect to the site file. It also sets up automatic renewal.
+Certbot creates an HTTPS copy of the site (`expanse.shivamcodes.dev-le-ssl.conf`) and adds the HTTP → HTTPS redirect. It also sets up automatic renewal.
 
 > `.dev` domains work only over HTTPS in browsers. The site won't open in a browser until this step is done, and that's expected.
 
 If a firewall is enabled:
 
 ```bash
-sudo ufw allow 'Nginx Full'
+sudo ufw allow 'Apache Full'
 ```
 
 ## 8. Check the live site
@@ -181,7 +190,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml logs -f web
 docker compose -f docker-compose.prod.yml logs -f celery
 docker compose -f docker-compose.prod.yml logs -f nginx
-sudo tail -f /var/log/nginx/error.log          # host nginx
+sudo tail -f /var/log/apache2/error.log        # host Apache
 
 # Restart one service
 docker compose -f docker-compose.prod.yml restart web
@@ -213,10 +222,13 @@ Back up two things regularly:
 |---|---|
 | `502 Bad Gateway` | The Docker app isn't running. Check `docker compose ... ps` and the `web` logs. |
 | `400 Bad Request` | The domain is missing from `APP_DOMAINS` in `.env`. Fix it, then run `up -d`. |
-| `413 Request Entity Too Large` on upload | The image is larger than `client_max_body_size` (10M) in the host Nginx site. |
-| Images don't load (mixed content) | The host Nginx must send `X-Forwarded-Proto $scheme`. It's already in `deploy/host-nginx.conf`. |
+| `413 Request Entity Too Large` on upload | The image is larger than `LimitRequestBody` (10 MB) in the host Apache site. |
+| Images don't load (mixed content) | The host Apache must send `X-Forwarded-Proto`. It's already in `deploy/host-apache.conf`. |
 | certbot fails | DNS doesn't point to this server yet, or port 80 is blocked by the firewall. |
 | "port is already allocated" | Port 8081 is in use. Choose another port (see step 5). |
+| `Invalid command 'ProxyPass'` / `'RequestHeader'` | Apache modules are off. Run `sudo a2enmod proxy proxy_http headers`. |
+| `unknown shorthand flag: 'f' in -f` | The Docker Compose plugin isn't installed. Run `sudo apt install docker-compose-plugin`. |
+| Docker `permission denied ... docker.sock` | Run `sudo usermod -aG docker $USER`, then log out and back in (or prefix with `sudo`). |
 
 ## Before going live
 
